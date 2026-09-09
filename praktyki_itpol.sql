@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Wrz 09, 2026 at 12:38 PM
+-- Generation Time: Wrz 09, 2026 at 12:47 PM
 -- Wersja serwera: 10.4.28-MariaDB
 -- Wersja PHP: 8.2.4
 
@@ -128,7 +128,7 @@ CREATE TABLE `payment_transactions` (
 CREATE TABLE `pending_users` (
   `ID` int(11) NOT NULL,
   `email` varchar(50) NOT NULL,
-  `password_hash` varchar(30) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
   `phone_number` varchar(12) NOT NULL,
   `first_name` varchar(30) NOT NULL,
   `second_name` varchar(30) DEFAULT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE `pending_users` (
 CREATE TABLE `prices` (
   `court_ID` int(11) NOT NULL,
   `tax_vat` int(11) NOT NULL,
-  `price` float NOT NULL
+  `price` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -175,8 +175,6 @@ CREATE TABLE `reservations` (
   `ID` int(11) NOT NULL,
   `court_ID` int(11) NOT NULL,
   `client_ID` int(11) NOT NULL,
-  `begin_date` datetime NOT NULL,
-  `end_date` datetime NOT NULL,
   `codeID` varchar(64) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -221,7 +219,7 @@ CREATE TABLE `reservation_items` (
 CREATE TABLE `users` (
   `ID` int(11) NOT NULL,
   `email` varchar(50) NOT NULL,
-  `password_hash` varchar(30) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
   `registration_date` date NOT NULL,
   `phone_number` varchar(12) NOT NULL,
   `first_name` varchar(30) NOT NULL,
@@ -298,7 +296,9 @@ ALTER TABLE `receipts`
 -- Indeksy dla tabeli `reservations`
 --
 ALTER TABLE `reservations`
-  ADD PRIMARY KEY (`ID`);
+  ADD PRIMARY KEY (`ID`),
+  ADD KEY `fk_reservations_user` (`client_ID`),
+  ADD KEY `fk_reservations_court` (`court_ID`);
 
 --
 -- Indeksy dla tabeli `reservations_history`
@@ -440,6 +440,13 @@ ALTER TABLE `payment_transactions`
 ALTER TABLE `receipts`
   ADD CONSTRAINT `receipts_ibfk_1` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`ID`),
   ADD CONSTRAINT `receipts_ibfk_2` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`);
+
+--
+-- Constraints for table `reservations`
+--
+ALTER TABLE `reservations`
+  ADD CONSTRAINT `fk_reservations_court` FOREIGN KEY (`court_ID`) REFERENCES `courts` (`ID`),
+  ADD CONSTRAINT `fk_reservations_user` FOREIGN KEY (`client_ID`) REFERENCES `users` (`ID`);
 
 --
 -- Constraints for table `reservation_items`
