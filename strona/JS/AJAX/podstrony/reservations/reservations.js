@@ -3,7 +3,6 @@ import { DAY_NAMES, MONTH_NAMES, pad, toDateStr, addDays, TODAY, NOW_HOUR, DATES
 import {
     fmtDate,
     fmtShortDate,
-    courtClass,
     courtTag,
     returnReasonLabel,
     myReservationAt,

@@ -17,7 +17,6 @@ import {
   import {
     fmtDate,
     fmtShortDate,
-    courtClass,
     courtTag,
     returnReasonLabel,
     myReservationAt,
@@ -25,8 +24,9 @@ import {
     nextFreeSlotLabel
   } from "../../helpers.js"
 
-export function renderCourtDetail(){
-  const court = state.courts.find(c=>c.id===state.selectedCourtId);
+export async function renderCourtDetail(){
+  const courts = await state.courts;
+  const court = courts.find(c=>c.id===state.selectedCourtId);
   const di = state.selectedDateIndex;
   const date = DATES[di];
 

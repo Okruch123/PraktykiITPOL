@@ -13,7 +13,7 @@ import { renderKonto } from './podstrony/profile/account.js';
 
 import { renderObsluga } from './podstrony/admin/service.js';
 
-export function render(){
+export async function render(){
     if(
         state.tab === 'obsluga' &&
         !(state.auth.loggedIn && state.auth.user.isAdmin)
@@ -24,10 +24,10 @@ export function render(){
     let body;
 
     if(state.pendingPayment){
-        body = renderPayment();
+        body = await renderPayment();
     }
     else if(state.tab === 'korty'){
-        body = renderKorty();
+        body = await renderKorty();
     }
     else if(state.tab === 'konto'){
         body = renderKonto();

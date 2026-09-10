@@ -12,7 +12,6 @@ import{
 import{
   fmtDate,
   fmtShortDate,
-  courtClass,
   courtTag,
   returnReasonLabel,
   myReservationAt,

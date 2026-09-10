@@ -27,12 +27,6 @@ function fmtShortDate(d){
         + MONTH_NAMES[d.getMonth()];
 }
 
-
-function courtClass(surface){
-    return surface;
-}
-
-
 function courtTag(surface){
     return surface === 'clay'
         ? 'Mączka'
@@ -108,7 +102,6 @@ function nextFreeSlotLabel(court){
 export {
     fmtDate,
     fmtShortDate,
-    courtClass,
     courtTag,
     returnReasonLabel,
     myReservationAt,

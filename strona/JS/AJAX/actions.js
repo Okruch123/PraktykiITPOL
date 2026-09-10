@@ -28,8 +28,9 @@ function showToast(msg){
   setTimeout(()=>{ state.toast = null; render(); }, 3200);
 }
 
-function goToPaymentFlow(){
-  const court = state.courts.find(c=>c.id===state.selectedCourtId);
+async function goToPaymentFlow(){
+  const courts = await state.courts;
+  const court = courts.find(c=>c.id===state.selectedCourtId);
   const from = state.pick.from;
   const to = state.pick.to;
   state.pendingPayment = {
@@ -305,3 +306,120 @@ document.getElementById('app').addEventListener('keydown', (e) => {
     document.querySelector('[data-action="do-register"]')?.click();
   }
 });
+
+export function checkP24Status() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const status = urlParams.get('status');
+
+  if (!status) return;
+
+  const savedPayment = sessionStorage.getItem('p24_pending_payment');
+  const pb = savedPayment ? JSON.parse(savedPayment) : null;
+  sessionStorage.removeItem('p24_pending_payment');
+
+  if (status === 'success') {
+    const resId = 'r' + Date.now();
+    const courtName = pb?.courtName || 'Kort';
+
+    if (pb) {
+      state.reservations.push({
+        id: resId,
+        courtId: pb.courtId,
+        dateStr: toDateStr(DATES[pb.dateIndex] || TODAY),
+        dateIndex: pb.dateIndex || 0,
+        startHour: pb.from,
+        endHour: pb.to,
+        price: pb.price
+      });
+
+      state.transactions.unshift({
+        id: 't' + Date.now(),
+        dateStr: toDateStr(TODAY),
+        desc: `Rezerwacja — ${courtName}, ${pad(pb.from)}:00–${pad(pb.to)}:00`,
+        amount: pb.price,
+        status: 'done'
+      });
+    }
+
+    state.overlay = {
+      stage: 'success',
+      courtName: courtName,
+      reservationId: resId
+    };
+
+    setTimeout(() => {
+      goToReservationDetail(resId);
+    }, 1800);
+
+  } else if (status === 'error' || status === 'fail') {
+    state.overlay = { stage: 'error' };
+  }
+
+  window.history.replaceState({}, document.title, window.location.pathname);
+  render(); // Przerysowujemy widok z nową nakładką
+}
+
+export async function handleRegister(e) {
+  console.log('[DEBUG] Start wysyłania rejestracji...');
+
+  // Jeśli mamy zdarzenie, szukamy pól w rodzicu przycisku (formularzu/karcie)
+  const container = e ? e.target.closest('.auth-card') : document;
+
+  const email = container?.querySelector('#authEmailInput')?.value?.trim() || document.getElementById('authEmailInput')?.value?.trim();
+  const username = container?.querySelector('#authRegLoginInput')?.value?.trim() || document.getElementById('authRegLoginInput')?.value?.trim();
+  const password = container?.querySelector('#authRegPasswordInput')?.value || document.getElementById('authRegPasswordInput')?.value;
+  const confirmPassword = container?.querySelector('#authRegConfirmInput')?.value || document.getElementById('authRegConfirmInput')?.value;
+
+  console.log('[DEBUG] Odczytane wartości z pól:', { 
+    email, 
+    username, 
+    password: password ? 'Wpisane' : 'Brak', 
+    confirmPassword: confirmPassword ? 'Wpisane' : 'Brak' 
+  });
+
+  if (!email || !password) {
+    state.auth.error = 'Wypełnij adres e-mail oraz hasło.';
+    render();
+    return;
+  }
+
+  try {
+    const res = await fetch('PHP/login/register.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        username: username,
+        password: password,
+        confirmPassword: confirmPassword,
+        first_name: username || 'Użytkownik',
+        surname: 'Brak',
+        phone_number: ''
+      })
+    });
+
+    console.log('[DEBUG] Status HTTP:', res.status);
+    const rawText = await res.text();
+    console.log('[DEBUG] Surowa odpowiedź z PHP:', rawText);
+
+    const data = JSON.parse(rawText);
+
+    if (data.success) {
+      state.auth.view = 'login';
+      state.auth.error = data.message;
+      state.user = null;
+      render();
+    } else {
+      state.auth.error = data.message;
+      render();
+    }
+  } catch (err) {
+    console.error('[DEBUG] Błąd przetworzenia odpowiedzi:', err);
+    state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+    render();
+  }
+}
+
+// Automatyczne wywołanie sprawdzania statusu przy załadowaniu pliku actions.js
+checkP24Status();
+
