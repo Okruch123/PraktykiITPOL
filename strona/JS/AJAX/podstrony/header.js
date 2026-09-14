@@ -19,7 +19,7 @@ export function renderHeader(){
         <div class="wordmark">SET<span>POINT</span></div>
         <div class="header-auth">
           ${state.auth.loggedIn
-            ? `<span class="header-auth-user">Zalogowano: ${state.auth.user.login}${state.auth.user.isAdmin ? ' (obsługa)' : ''}</span><button class="header-auth-btn" data-action="logout">Wyloguj</button>`
+            ? `<span class="header-auth-user">Zalogowano: ${state.auth.user.email}${state.auth.user.isAdmin ? ' (obsługa)' : ''}</span><button class="header-auth-btn" data-action="logout">Wyloguj</button>`
             : `<button class="header-auth-btn" data-action="open-auth" data-mode="login">Zaloguj się</button>`}
         </div>
       </div>

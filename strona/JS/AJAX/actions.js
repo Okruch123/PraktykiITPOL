@@ -8,6 +8,7 @@ import {
 } from '../utils.js';
 
 import { render } from './render.js';
+import { checkAuth } from './helpers.js';
 
 let overlayTimer = null;
 
@@ -209,26 +210,6 @@ document.getElementById('app').addEventListener('click', (e) => {
     state.auth.error = null;
     state.auth.resumeToPayment = false;
   }
-  else if(action==='do-login'){
-    const login = document.getElementById('authLoginInput').value.trim();
-    const password = document.getElementById('authPasswordInput').value;
-    const user = state.users.find(u => u.login.toLowerCase()===login.toLowerCase() && u.password===password);
-    if(!login || !password){
-      state.auth.error = 'Podaj login i hasło.';
-    } else if(!user){
-      state.auth.error = 'Nieprawidłowy login lub hasło.';
-    } else {
-      state.auth.loggedIn = true;
-      state.auth.user = { login: user.login, email: user.email, isAdmin: !!user.isAdmin };
-      state.auth.error = null;
-      const resume = state.auth.resumeToPayment;
-      state.auth.view = null;
-      state.auth.resumeToPayment = false;
-      if(resume) goToPaymentFlow();
-      showToast('Zalogowano jako ' + user.login + '.');
-      return;
-    }
-  }
   else if(action==='do-register'){
     const email = document.getElementById('authEmailInput').value.trim();
     const login = document.getElementById('authRegLoginInput').value.trim();
@@ -365,14 +346,12 @@ export async function handleRegister(e) {
   // Jeśli mamy zdarzenie, szukamy pól w rodzicu przycisku (formularzu/karcie)
   const container = e ? e.target.closest('.auth-card') : document;
 
-  const email = container?.querySelector('#authEmailInput')?.value?.trim() || document.getElementById('authEmailInput')?.value?.trim();
-  const username = container?.querySelector('#authRegLoginInput')?.value?.trim() || document.getElementById('authRegLoginInput')?.value?.trim();
+  const email = container?.querySelector('#authRegEmailInput')?.value?.trim() || document.getElementById('authRegEmailInput')?.value?.trim();
   const password = container?.querySelector('#authRegPasswordInput')?.value || document.getElementById('authRegPasswordInput')?.value;
   const confirmPassword = container?.querySelector('#authRegConfirmInput')?.value || document.getElementById('authRegConfirmInput')?.value;
 
   console.log('[DEBUG] Odczytane wartości z pól:', { 
     email, 
-    username, 
     password: password ? 'Wpisane' : 'Brak', 
     confirmPassword: confirmPassword ? 'Wpisane' : 'Brak' 
   });
@@ -389,10 +368,9 @@ export async function handleRegister(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: email,
-        username: username,
         password: password,
         confirmPassword: confirmPassword,
-        first_name: username || 'Użytkownik',
+        first_name: 'Użytkownik',
         surname: 'Brak',
         phone_number: ''
       })
@@ -408,6 +386,61 @@ export async function handleRegister(e) {
       state.auth.view = 'login';
       state.auth.error = data.message;
       state.user = null;
+      render();
+    } else {
+      state.auth.error = data.message;
+      render();
+    }
+  } catch (err) {
+    console.error('[DEBUG] Błąd przetworzenia odpowiedzi:', err);
+    state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+    render();
+  }
+}
+
+export async function handleLogin(e) {
+  console.log("[DEBUG] Start wysyłania logowania...")
+
+  const container = e ? e.target.closest('.auth-card') : document;
+
+  const email = container?.querySelector('#authEmailInput')?.value?.trim() || document.getElementById('authEmailInput')?.value?.trim();
+  const password = container?.querySelector('#authPasswordInput')?.value || document.getElementById('authPasswordInput')?.value;
+
+  console.log('[DEBUG] Odczytane wartości z pól:', { 
+    email, 
+    password: password ? 'Wpisane' : 'Brak', 
+  });
+
+  if (!email || !password) {
+    state.auth.error = 'Wypełnij adres e-mail oraz hasło.';
+    render();
+    return;
+  }  
+
+    try {
+    const res = await fetch('PHP/login/login.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        password: password,
+      })
+    });
+
+    console.log('[DEBUG] Status HTTP:', res.status);
+    const rawText = await res.text();
+    console.log('[DEBUG] Surowa odpowiedź z PHP:', rawText);
+
+    const data = JSON.parse(rawText);
+
+    if (data.success) {
+      state.auth.error = data.message;
+      document.cookie = "email=" + data.user.email + ";";
+      state.auth.loggedIn = true;
+      state.auth.user = { email: data.user.email};
+      checkAuth(data.user.email);
+      showToast('Zalogowano jako ' + data.user.email + '.');
+      state.auth.view = null;
       render();
     } else {
       state.auth.error = data.message;

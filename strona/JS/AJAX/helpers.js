@@ -98,6 +98,19 @@ function nextFreeSlotLabel(court){
     return 'brak wolnych terminów';
 }
 
+async function checkAuth(sessionID, email){
+    const res = await fetch('PHP/db_getters/auth.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        sessionID: sessionID,
+      })
+    });
+    console.log(res);
+    console.log(res.result);
+}
+
 
 export {
     fmtDate,
@@ -106,5 +119,6 @@ export {
     returnReasonLabel,
     myReservationAt,
     isHourFree,
-    nextFreeSlotLabel
+    nextFreeSlotLabel,
+    checkAuth
 };

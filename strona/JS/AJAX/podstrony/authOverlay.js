@@ -20,12 +20,8 @@ export function renderAuthOverlay(){
 
         ${mode==='register' ? `
           <div class="auth-field">
-            <label for="authEmailInput">E-mail</label>
-            <input id="authEmailInput" type="email" autocomplete="email">
-          </div>
-          <div class="auth-field">
-            <label for="authRegLoginInput">Login</label>
-            <input id="authRegLoginInput" type="text" autocomplete="username">
+            <label for="authRegEmailInput">E-mail</label>
+            <input id="authRegEmailInput" type="email" autocomplete="email">
           </div>
           <div class="auth-field">
             <label for="authRegPasswordInput">Hasło</label>
@@ -39,8 +35,8 @@ export function renderAuthOverlay(){
           <p class="auth-note">Masz już konto? <button class="auth-link-btn" data-action="switch-auth" data-mode="login">Zaloguj się</button></p>
         ` : `
           <div class="auth-field">
-            <label for="authLoginInput">Login</label>
-            <input id="authLoginInput" type="text" autocomplete="username">
+            <label for="authEmailInput">E-mail</label>
+            <input id="authEmailInput" type="text" autocomplete="username">
           </div>
           <div class="auth-field">
             <label for="authPasswordInput">Hasło</label>

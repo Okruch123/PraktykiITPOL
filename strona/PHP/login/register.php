@@ -1,12 +1,10 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-// --- WYŁĄCZENIE WYŚWIETLANIA BŁĘDÓW W ODPOWIEDZI (będą w logach) ---
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
-// Poprawiona ścieżka do PHPMailer (dostosuj poziom cofania, jeśli plik leży w PHP/login/)
 require_once(__DIR__ . '/../../../PHPMailer-master/src/Exception.php');
 require_once(__DIR__ . '/../../../PHPMailer-master/src/PHPMailer.php');
 require_once(__DIR__ . '/../../../PHPMailer-master/src/SMTP.php');
@@ -26,7 +24,6 @@ function writeDebugLog($message, $data = null) {
 
 writeDebugLog("--- ROZPOCZĘCIE ŻĄDANIA REJESTRACJI ---");
 
-// Dołączenie configu z połączeniem $config
 require_once('../db_getters/config.php');
 
 if (!$config) {

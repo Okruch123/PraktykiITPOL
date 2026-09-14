@@ -32,15 +32,6 @@ const state = {
         resumeToPayment: false
     },
 
-    users: [
-        {
-            login: 'admin',
-            password: 'admin',
-            email: 'admin@setpoint.pl',
-            isAdmin: true
-        }
-    ],
-
     profile: {
         name: 'Anna Kowalska',
         email: 'anna.kowalska@przyklad.pl',
@@ -125,44 +116,6 @@ const BANKS = [
 function isOccupiedByOthers(courtId, dateIndex, hour){
     return (courtId * 13 + dateIndex * 7 + hour * 3) % 11 === 0;
 }
-
-// (function seedMyReservations(){
-
-//     const r1 = {
-//         id: 'r1',
-//         courtId: 2,
-//         dateIndex: 1,
-//         startHour: 18,
-//         endHour: 19
-//     };
-
-//     const r2 = {
-//         id: 'r2',
-//         courtId: 4,
-//         dateIndex: 3,
-//         startHour: 20,
-//         endHour: 22
-//     };
-
-//     [r1, r2].forEach(r => {
-
-//         const court = state.courts.find(
-//             c => c.id === r.courtId
-//         );
-
-//         state.reservations.push({
-//             id: r.id,
-//             courtId: r.courtId,
-//             dateStr: toDateStr(DATES[r.dateIndex]),
-//             dateIndex: r.dateIndex,
-//             startHour: r.startHour,
-//             endHour: r.endHour,
-//             price: court.price * (r.endHour - r.startHour)
-//         });
-
-//     });
-
-// })();
 
 export {
     state,

@@ -1,4 +1,4 @@
-import { handleRegister } from './AJAX/actions.js';
+import { handleRegister, handleLogin } from './AJAX/actions.js';
 import { state } from './state.js';
 import { render } from './AJAX/render.js';
 
@@ -11,6 +11,11 @@ document.addEventListener('click', (e) => {
   if (action === 'do-register') {
     e.preventDefault();
     handleRegister(e);
+  }
+
+  if (action == 'do-login') {
+    e.preventDefault();
+    handleLogin(e);
   }
 
   if (action === 'switch-auth') {

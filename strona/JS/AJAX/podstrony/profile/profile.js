@@ -14,12 +14,8 @@ export function renderProfil(){
   return `
     <div class="profile-card">
       ${field('Imię i nazwisko','name',p.name)}
-      ${field('E-mail','email',p.email)}
+      ${field('E-mail','email',state.auth.user.email)}
       ${field('Telefon','phone',p.phone)}
-      <div class="profile-row">
-        <div class="profile-label">Nr karty klubowej</div>
-        <div class="profile-value">${p.cardNo}</div>
-      </div>
       <div class="profile-row">
         <div class="profile-label">Członkostwo</div>
         <div class="profile-value">${p.member}</div>
