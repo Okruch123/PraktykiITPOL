@@ -13,12 +13,9 @@ if (mysqli_stmt_execute($stmtInsert)) {
     $host = $_SERVER['HTTP_HOST'];
     $activationUrl = "$protocol://$host/PraktykiITPOL/strona/PHP/login/verify.php?token=$verificationToken";
 
-    // Konfiguracja i wysyłka PHPMailer
-// Konfiguracja i wysyłka PHPMailer
     $mail = new PHPMailer(true);
 
     try {
-        // Konfiguracja serwera SMTP
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
@@ -28,17 +25,14 @@ if (mysqli_stmt_execute($stmtInsert)) {
         $mail->Port       = 587;
         $mail->CharSet    = 'UTF-8';
 
-        // Włączenie szczegółowego debugowania SMTP (zapisuje log do pliku error_log lub zwraca)
         $mail->SMTPDebug = 2; 
         $mail->Debugoutput = function($str, $level) {
             error_log("PHPMailer Debug [$level]: $str");
         };
 
-        // Nadawca i odbiorca
         $mail->setFrom('oskarjablonski069@gmail.com', 'SETPOINT Rezerwacje');
         $mail->addAddress($email, $firstName);
 
-        // Treść wiadomości
         $mail->isHTML(true);
         $mail->Subject = 'Potwierdzenie rejestracji - SETPOINT';
         $mail->Body    = "Witaj <b>" . htmlspecialchars($firstName) . "</b>,<br><br>Aby aktywować konto w serwisie SETPOINT, kliknij poniższy link:<br><a href='$activationUrl'>$activationUrl</a>";
@@ -52,7 +46,6 @@ if (mysqli_stmt_execute($stmtInsert)) {
         ]);
 
     } catch (Exception $e) {
-        // Zwracamy dokładny błąd PHPMailer bezpośrednio do konsoli przeglądarki
         $errorMsg = "Błąd PHPMailer: " . $mail->ErrorInfo . " | Wyjątek: " . $e->getMessage();
         error_log($errorMsg);
         

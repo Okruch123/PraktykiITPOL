@@ -337,13 +337,12 @@ export function checkP24Status() {
   }
 
   window.history.replaceState({}, document.title, window.location.pathname);
-  render(); // Przerysowujemy widok z nową nakładką
+  render();
 }
 
 export async function handleRegister(e) {
   console.log('[DEBUG] Start wysyłania rejestracji...');
 
-  // Jeśli mamy zdarzenie, szukamy pól w rodzicu przycisku (formularzu/karcie)
   const container = e ? e.target.closest('.auth-card') : document;
 
   const email = container?.querySelector('#authRegEmailInput')?.value?.trim() || document.getElementById('authRegEmailInput')?.value?.trim();
@@ -453,6 +452,5 @@ export async function handleLogin(e) {
   }
 }
 
-// Automatyczne wywołanie sprawdzania statusu przy załadowaniu pliku actions.js
 checkP24Status();
 

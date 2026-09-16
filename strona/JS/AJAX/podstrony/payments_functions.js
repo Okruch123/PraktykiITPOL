@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 
-// Pobieranie danych ze środowiska (wczytywanych automatycznie przez Node.js)
 const MERCHANT_ID = process.env.P24_MERCHANT_ID;
 const POS_ID = process.env.P24_POS_ID || process.env.P24_MERCHANT_ID;
 const CRC_KEY = process.env.P24_CRC_KEY;
@@ -9,10 +8,7 @@ const IS_SANDBOX = (process.env.P24_MODE || 'sandbox') === 'sandbox';
 const P24_BASE_URL = IS_SANDBOX 
   ? 'https://sandbox.przelewy24.pl' 
   : 'https://secure.przelewy24.pl';
-
-/**
- * Generowanie podpisu SHA-384 do Przelewy24
- */
+  
 function generateSign(sessionId, amount, currency, crc) {
   const jsonString = JSON.stringify({
     sessionId,
@@ -24,9 +20,6 @@ function generateSign(sessionId, amount, currency, crc) {
   return crypto.createHash('sha384').update(jsonString, 'utf8').digest('hex');
 }
 
-/**
- * Główna funkcja tworząca płatność
- */
 export async function createP24Transaction({ amount, email, description, returnUrl }) {
   const amountInGrosze = Math.round(amount * 100);
   const sessionId = `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`;

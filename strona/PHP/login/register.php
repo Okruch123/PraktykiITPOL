@@ -34,7 +34,6 @@ if (!$config) {
     exit;
 }
 
-// Pobranie danych z requestu JSON lub POST
 $rawInput = file_get_contents('php://input');
 writeDebugLog("Odebrany raw input", $rawInput);
 
@@ -51,7 +50,6 @@ $secondName  = trim($data['second_name'] ?? '');
 $surname     = trim($data['surname'] ?? 'Brak');
 $phoneNumber = trim($data['phone_number'] ?? '');
 
-// --- WALIDACJA ---
 
 if (empty($email) || empty($password)) {
     writeDebugLog("WALIDACJA ODRZUCONA: Pusty email lub hasło");
@@ -71,9 +69,7 @@ if ($password !== $confirmPass) {
     exit;
 }
 
-// --- WERYFIKACJA DUBLATÓW ---
 
-// 1. Tabela users
 $stmtUsers = mysqli_prepare($config, "SELECT ID FROM users WHERE email = ? LIMIT 1");
 mysqli_stmt_bind_param($stmtUsers, "s", $email);
 mysqli_stmt_execute($stmtUsers);
@@ -87,7 +83,6 @@ if (mysqli_stmt_num_rows($stmtUsers) > 0) {
 }
 mysqli_stmt_close($stmtUsers);
 
-// 2. Tabela pending_users
 $stmtPending = mysqli_prepare($config, "SELECT ID FROM pending_users WHERE email = ? LIMIT 1");
 mysqli_stmt_bind_param($stmtPending, "s", $email);
 mysqli_stmt_execute($stmtPending);
@@ -101,7 +96,6 @@ if (mysqli_stmt_num_rows($stmtPending) > 0) {
 }
 mysqli_stmt_close($stmtPending);
 
-// --- ZAPIS W `pending_users` ---
 
 $passwordHash = password_hash($password, PASSWORD_BCRYPT);
 $verificationToken = bin2hex(random_bytes(16));
@@ -141,7 +135,6 @@ if (mysqli_stmt_execute($stmtInsert)) {
     $host = $_SERVER['HTTP_HOST'];
     $activationUrl = "$protocol://$host/PraktykiITPOL/strona/PHP/login/verify.php?token=$verificationToken";
 
-    // --- WYSYŁKA MAILA PRZEZ PHPMAILER ---
     $mail = new PHPMailer(true);
 
     try {

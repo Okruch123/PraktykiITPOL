@@ -3,7 +3,6 @@ import { DATES, pad } from "../../utils.js";
 import { fmtDate } from "../helpers.js";
 import { render } from "../render.js";
 
-// Udostępniamy funkcję globalnie w oknie przeglądarki
 window.handlePayP24 = async function handlePayP24() {
   const pb = state.pendingPayment;
 
@@ -14,13 +13,11 @@ window.handlePayP24 = async function handlePayP24() {
   const courts = await state.courts;
   const court = courts.find(c => c.id === pb.courtId);
 
-  // Zapisujemy dane transakcji w pamięci sesji przeglądarki
   sessionStorage.setItem('p24_pending_payment', JSON.stringify({
     ...pb,
     courtName: court ? court.name : 'Kort'
   }));
 
-  // Włączamy overlay przetwarzania
   state.overlay = {
     stage: 'processing',
     courtName: court ? court.name : 'Kort',

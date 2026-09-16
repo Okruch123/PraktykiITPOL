@@ -41,37 +41,6 @@ const state = {
     },
 
     courts: fetch('PHP/db_getters/courtsData.php').then(r => r.json()),
-    // [
-    //     {
-    //         id: 1,
-    //         name: 'Kort 1',
-    //         surface: 'clay',
-    //         surfaceLabel: 'Nawierzchnia ceglana, zewnętrzny',
-    //         price: 60
-    //     },
-    //     {
-    //         id: 2,
-    //         name: 'Kort 2',
-    //         surface: 'hard',
-    //         surfaceLabel: 'Nawierzchnia twarda, zewnętrzny',
-    //         price: 55
-    //     },
-    //     {
-    //         id: 3,
-    //         name: 'Kort 3',
-    //         surface: 'clay',
-    //         surfaceLabel: 'Nawierzchnia ceglana, zewnętrzny',
-    //         price: 60
-    //     },
-    //     {
-    //         id: 4,
-    //         name: 'Kort 4',
-    //         surface: 'hala',
-    //         surfaceLabel: 'Hala, nawierzchnia dywanowa',
-    //         price: 80
-    //     }
-    // ],
-
     reservations: [],
 
     transactions: [
