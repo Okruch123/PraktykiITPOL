@@ -104,3 +104,12 @@
 [2026-09-14 10:13:18] Zdekodowane dane JS | Data: {"email":"czubaksebastian21@gmail.com","password":"123","confirmPassword":"123","first_name":"Użytkownik","surname":"Brak","phone_number":""}
 [2026-09-14 10:13:18] ODRZUCONO: Użytkownik już w `pending_users` | Data: "czubaksebastian21@gmail.com"
 [2026-09-14 10:13:19] SUKCES: E-mail wysłany przez PHPMailer do | Data: "czubaksebastian21@gmail.com"
+[2026-09-17 09:19:18] --- ROZPOCZĘCIE ŻĄDANIA REJESTRACJI ---
+[2026-09-17 09:19:18] Odebrany raw input | Data: "{\"email\":\"czubaksebastian21@gmail.com\",\"password\":\"123\",\"confirmPassword\":\"123\",\"first_name\":\"Użytkownik\",\"surname\":\"Brak\",\"phone_number\":\"\"}"
+[2026-09-17 09:19:18] Zdekodowane dane JS | Data: {"email":"czubaksebastian21@gmail.com","password":"123","confirmPassword":"123","first_name":"Użytkownik","surname":"Brak","phone_number":""}
+[2026-09-17 09:19:18] SUKCES: Dodano użytkownika do `pending_users` | Data: {"email":"czubaksebastian21@gmail.com","token":"138f8f728b814816f3d8731067468a25"}
+[2026-09-17 09:19:19] --- ROZPOCZĘCIE ŻĄDANIA REJESTRACJI ---
+[2026-09-17 09:19:19] Odebrany raw input | Data: "{\"email\":\"czubaksebastian21@gmail.com\",\"password\":\"123\",\"confirmPassword\":\"123\",\"first_name\":\"Użytkownik\",\"surname\":\"Brak\",\"phone_number\":\"\"}"
+[2026-09-17 09:19:19] Zdekodowane dane JS | Data: {"email":"czubaksebastian21@gmail.com","password":"123","confirmPassword":"123","first_name":"Użytkownik","surname":"Brak","phone_number":""}
+[2026-09-17 09:19:19] ODRZUCONO: Użytkownik już w `pending_users` | Data: "czubaksebastian21@gmail.com"
+[2026-09-17 09:19:20] SUKCES: E-mail wysłany przez PHPMailer do | Data: "czubaksebastian21@gmail.com"

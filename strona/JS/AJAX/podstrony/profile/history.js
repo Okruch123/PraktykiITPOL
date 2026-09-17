@@ -3,7 +3,8 @@ import { fmtShortDate } from "../../helpers.js";
 
 export function renderHistoria(){
   const txs = state.transactions.slice().sort((a,b)=> b.dateStr.localeCompare(a.dateStr));
-  return `
+  if(state.auth.user != null){
+    return `
     <div>
       ${txs.map(t => `
         <div class="tx-row">
@@ -15,4 +16,12 @@ export function renderHistoria(){
       `).join('')}
     </div>
   `;
+  }
+  else{
+    return `
+    <div>
+     <span>Brak historii rezerwacji</span>
+    </div>
+  `;
+  }
 }

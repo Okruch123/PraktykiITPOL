@@ -107,7 +107,6 @@ async function checkAuth(sessionID, email){
         sessionID: sessionID,
       })
     });
-    console.log(res);
     console.log(res.result);
 }
 
