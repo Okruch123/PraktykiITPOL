@@ -1,15 +1,15 @@
 import { state } from "../../../state.js";
-import{
+import {
   DAY_NAMES,
-    MONTH_NAMES,
-    pad,
-    toDateStr,
-    addDays,
-    TODAY,
-    NOW_HOUR,
-    DATES
+  MONTH_NAMES,
+  pad,
+  toDateStr,
+  addDays,
+  TODAY,
+  NOW_HOUR,
+  DATES
 } from "../../../utils.js";
-import{
+import {
   fmtDate,
   fmtShortDate,
   courtTag,
@@ -19,11 +19,17 @@ import{
   nextFreeSlotLabel
 } from "../../helpers.js";
 
+import { renderRezerwacje } from "./reservations.js";
+
 export function renderReservationDetail(id){
-  const r = state.reservations.find(x=>x.id===id);
-  if(!r) return renderRezerwacje();
-  const court = state.courts.find(c=>c.id===r.courtId);
-  const date = DATES[r.dateIndex];
+  const r = state.reservations.find(x => x.id === id);
+  if(!r) return renderRezerwacje(state.profile.email);
+  
+  const courts = Array.isArray(state.courts) ? state.courts : [];
+  const court = courts.find(c => c.id === r.courtId) || { name: 'Kort', surfaceLabel: '' };
+  
+  // Bezpieczne pobranie daty (z bazy tekstowej lub tablicy DATES)
+  const date = r.dateStr ? new Date(r.dateStr) : (DATES[r.dateIndex] || new Date());
   const rr = r.returnRequest;
   const qrPayload = `SETPOINT|${r.id}|${court.name}|${fmtDate(date)}|${pad(r.startHour)}:00-${pad(r.endHour)}:00`;
 
@@ -76,7 +82,7 @@ export function renderReservationDetail(id){
     <div class="payment-summary">
       <div class="payment-row"><span>Kort</span><strong>${court.name} · ${court.surfaceLabel}</strong></div>
       <div class="payment-row"><span>Termin</span><strong>${fmtDate(date)}, ${pad(r.startHour)}:00–${pad(r.endHour)}:00</strong></div>
-      <div class="payment-row"><span>Czas trwania</span><strong>${r.endHour-r.startHour} godz.</strong></div>
+      <div class="payment-row"><span>Czas trwania</span><strong>${r.endHour - r.startHour} godz.</strong></div>
       <div class="payment-row"><span>Metoda płatności</span><strong>Szybki przelew${r.bank ? ' — '+r.bank : ''}</strong></div>
       <div class="payment-row"><span>Numer rezerwacji</span><strong>${r.id}</strong></div>
       <div class="payment-row total"><span>Zapłacono</span><strong>${r.price} zł</strong></div>

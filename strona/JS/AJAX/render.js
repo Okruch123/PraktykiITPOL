@@ -13,6 +13,8 @@ import { renderKonto } from './podstrony/profile/account.js';
 
 import { renderObsluga } from './podstrony/admin/service.js';
 
+import { getCookie } from './helpers.js';
+
 export async function render(){
     if(
         state.tab === 'obsluga' &&
@@ -36,9 +38,10 @@ export async function render(){
         body = renderObsluga();
     }
     else{
+        var email = getCookie('email');
         body = state.viewingReservationId
-            ? renderReservationDetail(state.viewingReservationId)
-            : renderRezerwacje();
+            ? await renderReservationDetail(state.viewingReservationId)
+            : await renderRezerwacje(email);
 
     }
 

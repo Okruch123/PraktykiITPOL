@@ -17,7 +17,11 @@
   *{ box-sizing:border-box; }
   html,body{
      margin:0; 
-     padding:0; 
+     padding:0;   .picker-summary{
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid var(--sand-line);
+  }
   }
   body{
     background:var(--bg);

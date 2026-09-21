@@ -11,6 +11,11 @@ import {
     isOccupiedByOthers
 } from '../state.js';
 
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
 
 function fmtDate(d){
     return DAY_NAMES[d.getDay()]
@@ -60,21 +65,19 @@ function myReservationAt(courtId, dateIndex, hour){
     );
 }
 
-
 function isHourFree(courtId, dateIndex, hour){
-
     if(dateIndex === 0 && hour <= NOW_HOUR)
         return false;
 
     if(myReservationAt(courtId, dateIndex, hour))
         return false;
 
-    if(isOccupiedByOthers(courtId, dateIndex, hour))
+    // Sprawdzamy, czy godzina jest w tablicy pobranej z bazy danych przez PHP
+    if(state.bookedHours && state.bookedHours.includes(hour))
         return false;
 
     return true;
 }
-
 
 function nextFreeSlotLabel(court){
 
@@ -99,15 +102,21 @@ function nextFreeSlotLabel(court){
 }
 
 async function checkAuth(sessionID, email){
-    const res = await fetch('PHP/db_getters/auth.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        sessionID: sessionID,
-      })
-    });
-    console.log(res.result);
+    try {
+        const res = await fetch('PHP/db_getters/auth.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email,
+            sessionID: sessionID,
+          })
+        });
+        const data = await res.json();
+        return data; // Zwracamy wynik do startup.js!
+    } catch (e) {
+        console.error("Błąd checkAuth:", e);
+        return { success: false };
+    }
 }
 
 
@@ -119,5 +128,6 @@ export {
     myReservationAt,
     isHourFree,
     nextFreeSlotLabel,
-    checkAuth
+    checkAuth,
+    getCookie
 };

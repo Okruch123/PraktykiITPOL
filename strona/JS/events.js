@@ -54,6 +54,69 @@ document.addEventListener('click', async (e) => {
 
 
     // =====================================================
+    // WERYFIKACJA 2FA DLA LOGOWANIA
+    // =====================================================
+
+    if (action === 'verify-login-2fa') {
+        e.preventDefault();
+
+        const input = document.getElementById('auth2FACodeInput');
+        const code = input ? input.value.trim() : '';
+
+        if (!code || code.length !== 6) {
+            state.auth.error = 'Wprowadź poprawny 6-cyfrowy kod.';
+            render();
+            return;
+        }
+
+        try {
+            const res = await fetch('PHP/login/verify_login_2fa.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                state.auth.requires2FA = false;
+                state.auth.loggedIn = true;
+                state.auth.user = { email: data.user.email };
+                state.auth.view = null;
+                state.auth.error = null;
+                
+                // Jeśli masz funkcję sprawdzającą stan autoryzacji globalnej:
+                if (typeof checkAuth === 'function') {
+                    checkAuth(data.user.email);
+                }
+                
+                render();
+            } else {
+                state.auth.error = data.message;
+                render();
+            }
+        } catch (err) {
+            state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+            render();
+        }
+
+        return;
+    }
+
+
+    // =====================================================
+    // ANULOWANIE 2FA DLA LOGOWANIA (POWRÓT)
+    // =====================================================
+
+    if (action === 'cancel-login-2fa') {
+        e.preventDefault();
+        state.auth.requires2FA = false;
+        state.auth.error = null;
+        render();
+        return;
+    }
+
+
+    // =====================================================
     // PRZEŁĄCZANIE LOGOWANIE / REJESTRACJA
     // =====================================================
 
@@ -65,6 +128,7 @@ document.addEventListener('click', async (e) => {
             actionBtn.dataset.mode;
 
         state.auth.error = null;
+        state.auth.requires2FA = false;
 
         render();
 
@@ -83,6 +147,10 @@ document.addEventListener('click', async (e) => {
         state.auth.view = null;
 
         state.auth.error = null;
+        
+        state.auth.requires2FA = false;
+        
+        state.auth.resumeToPayment = false;
 
         render();
 
@@ -91,7 +159,7 @@ document.addEventListener('click', async (e) => {
 
 
     // =====================================================
-    // START 2FA
+    // START 2FA (W PANELU UŻYTKOWNIKA)
     // =====================================================
 
     if (action === 'start-2fa') {
@@ -109,7 +177,7 @@ document.addEventListener('click', async (e) => {
 
 
     // =====================================================
-    // WYŚLIJ KOD 2FA
+    // WYŚLIJ KOD 2FA (W PANELU UŻYTKOWNIKA)
     // =====================================================
 
     if (action === 'send-2fa-code') {
@@ -127,7 +195,7 @@ document.addEventListener('click', async (e) => {
 
 
     // =====================================================
-    // POTWIERDŹ KOD 2FA
+    // POTWIERDŹ KOD 2FA (W PANELU UŻYTKOWNIKA)
     // =====================================================
 
     if (action === 'confirm-2fa') {

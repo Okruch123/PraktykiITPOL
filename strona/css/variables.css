@@ -1,0 +1,25 @@
+:root {
+--bg: #272727;
+--ink: #F1EFEA;
+--court: #2C6E49;
+--court-dark: #1D4A31;
+--clay: #718355;
+--clay-dark: #59683F;
+--line: #FFFFFF;
+--sand: #333333;
+--sand-line: #454545;
+--taupe: #6E6E6E;
+--available: #4C9A6E;
+--muted: #A8A49B;
+--hard: #4E6E7A;
+--primary-color: #2563eb;
+--primary-hover: #1d4ed8;
+--border-color: #ddd;
+--error-color: #dc2626;
+--success-color: #16a34a;
+--bg-light: #f9fafb;
+--text-main: #333;
+--text-muted: #666;
+--radius-sm: 6px;
+--radius-md: 8px;
+}

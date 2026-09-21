@@ -4,6 +4,8 @@ import {
     DATES
 } from './utils.js';
 
+import { getCookie } from './AJAX/helpers.js';
+
 const state = {
     tab: 'rezerwacje',
     selectedCourtId: null,
@@ -11,6 +13,8 @@ const state = {
     kontoSub: 'profil',
     editingProfile: false,
     toast: null,
+
+    bookedHours: [],
 
     pick: {
         from: null,
@@ -32,15 +36,10 @@ const state = {
         resumeToPayment: false
     },
 
-    profile: {
-        name: 'Anna Kowalska',
-        email: 'anna.kowalska@przyklad.pl',
-        phone: '512 345 678',
-        cardNo: 'SP-2381',
-        member: 'W klubie od 2023'
-    },
+    profile: {},
 
-    courts: fetch('PHP/db_getters/courtsData.php').then(r => r.json()),
+    // Startujemy z pustą tablicą – dane załadujemy funkcją initCourts()
+    courts: [],
     reservations: [],
 
     transactions: [
@@ -68,6 +67,18 @@ const state = {
     ]
 };
 
+// Funkcja pobierająca korty i zapisująca je do stanu jako zwykłą tablicę
+export async function initCourts() {
+    try {
+        const response = await fetch('PHP/db_getters/courtsData.php');
+        const data = await response.json();
+        state.courts = Array.isArray(data) ? data : [];
+    } catch (e) {
+        console.error("Nie udało się pobrać kortów:", e);
+        state.courts = [];
+    }
+}
+
 const HOURS = Array.from(
     { length: 15 },
     (_, i) => 7 + i
@@ -84,6 +95,30 @@ const BANKS = [
 
 function isOccupiedByOthers(courtId, dateIndex, hour){
     return (courtId * 13 + dateIndex * 7 + hour * 3) % 11 === 0;
+}
+
+export async function getProfileDetails(email){
+    try {
+        const response = await fetch("PHP/db_getters/profile.php", {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ email: email })
+        });
+        state.profile = await response.json();
+    } catch (e) {
+        console.error("Nie udało się pobrać profilu", e);
+    }
+}
+
+export async function fetchBookedHoursFromServer(courtId, dateStr) {
+    try {
+        const response = await fetch(`PHP/db_getters/get_booked_hours.php?courtId=${courtId}&dateStr=${dateStr}`);
+        const data = await response.json();
+        return data.bookedHours || [];
+    } catch (e) {
+        console.error("Nie udało się pobrać zajętych godzin", e);
+        return [];
+    }
 }
 
 export {

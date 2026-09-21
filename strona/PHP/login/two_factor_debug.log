@@ -1,67 +1,8 @@
-[2026-09-17 09:31:25] --- START 2FA ---
-[2026-09-17 09:31:25] Session ID | Data: "hd9gmodm4e..."
-[2026-09-17 09:31:25] Action | Data: "send"
-[2026-09-17 09:31:27] PHPMailer error | Data: "SMTP Error: Could not authenticate."
-[2026-09-17 09:31:37] --- START 2FA ---
-[2026-09-17 09:31:37] Session ID | Data: "hd9gmodm4e..."
-[2026-09-17 09:31:37] Action | Data: "send"
-[2026-09-17 09:31:38] PHPMailer error | Data: "SMTP Error: Could not authenticate."
-[2026-09-17 09:33:54] --- START 2FA ---
-[2026-09-17 09:33:54] Session ID | Data: "hd9gmodm4e..."
-[2026-09-17 09:33:54] Action | Data: "send"
-[2026-09-17 09:33:56] Kod wysłany | Data: {"user_id":6,"action":"enable","email":"oskarjablonski061@gmail.com"}
-[2026-09-17 09:38:12] --- START 2FA ---
-[2026-09-17 09:38:12] Session ID | Data: "06mvn56b5q..."
-[2026-09-17 09:38:12] Action | Data: "send"
-[2026-09-17 09:38:14] Kod wysłany | Data: {"user_id":6,"action":"enable","email":"oskarjablonski061@gmail.com"}
-[2026-09-17 09:40:24] --- START 2FA ---
-[2026-09-17 09:40:24] Session ID | Data: "l7l0bk5vvc..."
-[2026-09-17 09:40:24] Action | Data: "send"
-[2026-09-17 09:40:27] Kod wysłany | Data: {"user_id":6,"action":"enable","email":"oskarjablonski061@gmail.com"}
-[2026-09-17 09:40:27] --- START 2FA ---
-[2026-09-17 09:40:27] Session ID | Data: "l7l0bk5vvc..."
-[2026-09-17 09:40:27] Action | Data: "send"
-[2026-09-17 09:40:30] Kod wysłany | Data: {"user_id":6,"action":"enable","email":"oskarjablonski061@gmail.com"}
-[2026-09-17 09:44:27] --- START 2FA ---
-[2026-09-17 09:44:27] Session ID | Data: "g6cp628706..."
-[2026-09-17 09:44:27] Action | Data: "send"
-[2026-09-17 09:44:30] Kod wysłany | Data: {"user_id":6,"action":"enable","email":"oskarjablonski061@gmail.com"}
-[2026-09-17 09:45:14] --- START 2FA ---
-[2026-09-17 09:45:14] Session ID | Data: "mt4q31ustd..."
-[2026-09-17 09:45:14] Action | Data: "send"
-[2026-09-17 09:45:16] Kod wysłany | Data: {"user_id":8,"action":"enable","email":"czubaksebastian21@gmail.com"}
-[2026-09-17 09:47:33] --- START 2FA ---
-[2026-09-17 09:47:33] Session ID | Data: "ae5cnlbbtd..."
-[2026-09-17 09:47:33] Action | Data: "send"
-[2026-09-17 09:47:35] Kod wysłany | Data: {"user_id":6,"action":"enable","email":"oskarjablonski061@gmail.com"}
-[2026-09-17 09:53:30] --- START 2FA ---
-[2026-09-17 09:53:30] Session ID | Data: "b6e78eskaj..."
-[2026-09-17 09:53:30] Action | Data: "confirm"
-[2026-09-17 09:53:30] 2FA zmienione | Data: {"user_id":6,"new_value":1}
-[2026-09-17 09:53:58] --- START 2FA ---
-[2026-09-17 09:53:58] Session ID | Data: "t98s5agu2m..."
-[2026-09-17 09:53:58] Action | Data: "send"
-[2026-09-17 09:54:00] Kod wysłany | Data: {"user_id":8,"action":"enable","email":"czubaksebastian21@gmail.com"}
-[2026-09-17 09:54:02] --- START 2FA ---
-[2026-09-17 09:54:02] Session ID | Data: "b6e78eskaj..."
-[2026-09-17 09:54:02] Action | Data: "confirm"
-[2026-09-17 09:54:08] --- START 2FA ---
-[2026-09-17 09:54:08] Session ID | Data: "b6e78eskaj..."
-[2026-09-17 09:54:08] Action | Data: "send"
-[2026-09-17 09:54:10] Kod wysłany | Data: {"user_id":6,"action":"disable","email":"oskarjablonski061@gmail.com"}
-[2026-09-17 09:54:16] --- START 2FA ---
-[2026-09-17 09:54:16] Session ID | Data: "t98s5agu2m..."
-[2026-09-17 09:54:16] Action | Data: "confirm"
-[2026-09-17 09:54:16] 2FA zmienione | Data: {"user_id":8,"new_value":1}
-[2026-09-17 09:54:22] --- START 2FA ---
-[2026-09-17 09:54:22] Session ID | Data: "b6e78eskaj..."
-[2026-09-17 09:54:22] Action | Data: "confirm"
-[2026-09-17 09:54:22] 2FA zmienione | Data: {"user_id":6,"new_value":0}
-[2026-09-17 09:54:40] --- START 2FA ---
-[2026-09-17 09:54:40] Session ID | Data: "b6e78eskaj..."
-[2026-09-17 09:54:40] Action | Data: "send"
-[2026-09-17 09:54:42] Kod wysłany | Data: {"user_id":6,"action":"enable","email":"oskarjablonski061@gmail.com"}
-[2026-09-17 09:54:51] --- START 2FA ---
-[2026-09-17 09:54:51] Session ID | Data: "b6e78eskaj..."
-[2026-09-17 09:54:51] Action | Data: "confirm"
-[2026-09-17 09:54:51] 2FA zmienione | Data: {"user_id":6,"new_value":1}
+[2026-09-21 09:58:14] --- START 2FA ---
+[2026-09-21 09:58:14] Session ID | Data: "fjn4oacike..."
+[2026-09-21 09:58:14] Action | Data: "send"
+[2026-09-21 09:58:16] Kod wysłany | Data: {"user_id":8,"action":"disable","email":"czubaksebastian21@gmail.com"}
+[2026-09-21 09:58:23] --- START 2FA ---
+[2026-09-21 09:58:23] Session ID | Data: "fjn4oacike..."
+[2026-09-21 09:58:23] Action | Data: "confirm"
+[2026-09-21 09:58:23] 2FA zmienione | Data: {"user_id":8,"new_value":0}

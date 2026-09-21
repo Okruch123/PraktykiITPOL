@@ -1,4 +1,4 @@
-import { state } from '../state.js';
+import { state, fetchBookedHoursFromServer } from '../state.js';
 
 import {
     DATES,
@@ -43,7 +43,7 @@ async function goToPaymentFlow(){
   state.selectedBank = null;
 }
 
-document.getElementById('app').addEventListener('click', (e) => {
+document.getElementById('app').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action]');
   if(!btn) return;
   const action = btn.dataset.action;
@@ -57,17 +57,25 @@ document.getElementById('app').addEventListener('click', (e) => {
     state.showReturnForm = false;
     state.returnFormError = null;
   }
-  else if(action==='open-court'){
+else if(action==='open-court'){
     state.selectedCourtId = Number(btn.dataset.id);
     state.selectedDateIndex = 0;
     state.pick = { from:null, to:null };
-  }
-  else if(action==='back-to-korty'){
-    state.selectedCourtId = null;
-    state.pick = { from:null, to:null };
+
+    // Pobieramy zajęte godziny z PHP przed renderowaniem
+    const dateStr = toDateStr(DATES[state.selectedDateIndex]);
+    state.bookedHours = await fetchBookedHoursFromServer(state.selectedCourtId, dateStr);
   }
   else if(action==='set-date'){
     state.selectedDateIndex = Number(btn.dataset.index);
+    state.pick = { from:null, to:null };
+
+    // Pobieramy zajęte godziny dla nowo wybranej daty
+    const dateStr = toDateStr(DATES[state.selectedDateIndex]);
+    state.bookedHours = await fetchBookedHoursFromServer(state.selectedCourtId, dateStr);
+  }
+  else if(action==='back-to-korty'){
+    state.selectedCourtId = null;
     state.pick = { from:null, to:null };
   }
   else if(action==='quick-pick'){
@@ -210,6 +218,54 @@ document.getElementById('app').addEventListener('click', (e) => {
     state.auth.error = null;
     state.auth.resumeToPayment = false;
   }
+  else if(action==='verify-login-2fa'){
+    const input = document.getElementById('auth2FACodeInput');
+    const code = input ? input.value.trim() : '';
+
+    if (!code || code.length !== 6) {
+      state.auth.error = 'Wprowadź poprawny 6-cyfrowy kod.';
+      render();
+      return;
+    }
+
+    try {
+      const res = await fetch('PHP/login/verify_login_2fa.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        state.auth.requires2FA = false;
+        state.auth.loggedIn = true;
+        state.auth.user = { id: data.user.id, email: data.user.email, is_admin: data.user.is_admin };
+        state.auth.view = null;
+        state.auth.error = null;
+        
+        if (typeof checkAuth === 'function') {
+            checkAuth(data.user.email);
+        }
+        
+        showToast('Zalogowano pomyślnie.');
+        render();
+      } else {
+        state.auth.error = data.message;
+        render();
+      }
+    } catch (err) {
+      console.error('[DEBUG] Błąd weryfikacji 2FA:', err);
+      state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+      render();
+    }
+    return;
+  }
+  else if(action==='cancel-login-2fa'){
+    state.auth.requires2FA = false;
+    state.auth.error = null;
+    render();
+    return;
+  }
   else if(action==='do-register'){
     const email = document.getElementById('authEmailInput').value.trim();
     const login = document.getElementById('authRegLoginInput').value.trim();
@@ -237,7 +293,17 @@ document.getElementById('app').addEventListener('click', (e) => {
   else if(action==='logout'){
     state.auth.loggedIn = false;
     state.auth.user = null;
+    document.cookie = "email=; path=/; max-age=0";
+    document.cookie = "PHPSESSID=; path=/; max-age=0";
     showToast('Wylogowano.');
+    render();
+    return;
+  }
+  else if(action==='disable-remember-me'){
+    document.cookie = "email=; path=/; max-age=0";
+    document.cookie = "PHPSESSID=; path=/; max-age=0";
+    showToast('Wyłączono automatyczne logowanie na tym urządzeniu.');
+    render();
     return;
   }
   else if(action==='set-konto-sub'){
@@ -344,16 +410,9 @@ export async function handleRegister(e) {
   console.log('[DEBUG] Start wysyłania rejestracji...');
 
   const container = e ? e.target.closest('.auth-card') : document;
-
   const email = container?.querySelector('#authRegEmailInput')?.value?.trim() || document.getElementById('authRegEmailInput')?.value?.trim();
   const password = container?.querySelector('#authRegPasswordInput')?.value || document.getElementById('authRegPasswordInput')?.value;
   const confirmPassword = container?.querySelector('#authRegConfirmInput')?.value || document.getElementById('authRegConfirmInput')?.value;
-
-  console.log('[DEBUG] Odczytane wartości z pól:', { 
-    email, 
-    password: password ? 'Wpisane' : 'Brak', 
-    confirmPassword: confirmPassword ? 'Wpisane' : 'Brak' 
-  });
 
   if (!email || !password) {
     state.auth.error = 'Wypełnij adres e-mail oraz hasło.';
@@ -375,10 +434,7 @@ export async function handleRegister(e) {
       })
     });
 
-    console.log('[DEBUG] Status HTTP:', res.status);
     const rawText = await res.text();
-    console.log('[DEBUG] Surowa odpowiedź z PHP:', rawText);
-
     const data = JSON.parse(rawText);
 
     if (data.success) {
@@ -398,17 +454,16 @@ export async function handleRegister(e) {
 }
 
 export async function handleLogin(e) {
-  console.log("[DEBUG] Start wysyłania logowania...")
+  console.log("[DEBUG] Start wysyłania logowania...");
 
   const container = e ? e.target.closest('.auth-card') : document;
+  const emailInput = container?.querySelector('#authEmailInput') || document.getElementById('authEmailInput');
+  const passwordInput = container?.querySelector('#authPasswordInput') || document.getElementById('authPasswordInput');
+  const rememberCheckbox = container?.querySelector('#authRememberCheckbox') || document.getElementById('authRememberCheckbox');
 
-  const email = container?.querySelector('#authEmailInput')?.value?.trim() || document.getElementById('authEmailInput')?.value?.trim();
-  const password = container?.querySelector('#authPasswordInput')?.value || document.getElementById('authPasswordInput')?.value;
-
-  console.log('[DEBUG] Odczytane wartości z pól:', { 
-    email, 
-    password: password ? 'Wpisane' : 'Brak', 
-  });
+  const email = emailInput?.value?.trim() || '';
+  const password = passwordInput?.value || '';
+  const rememberMe = rememberCheckbox ? rememberCheckbox.checked : false;
 
   if (!email || !password) {
     state.auth.error = 'Wypełnij adres e-mail oraz hasło.';
@@ -416,7 +471,13 @@ export async function handleLogin(e) {
     return;
   }  
 
-    try {
+  const submitBtn = container?.querySelector('[data-action="do-login"]') || document.querySelector('[data-action="do-login"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Logowanie...';
+  }
+
+  try {
     const res = await fetch('PHP/login/login.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -426,31 +487,50 @@ export async function handleLogin(e) {
       })
     });
 
-    console.log('[DEBUG] Status HTTP:', res.status);
     const rawText = await res.text();
-    console.log('[DEBUG] Surowa odpowiedź z PHP:', rawText);
-
     const data = JSON.parse(rawText);
 
     if (data.success) {
+      if (data.requires_2fa) {
+        state.auth.requires2FA = true;
+        state.auth.error = data.message;
+        render();
+        return;
+      }
+      
+      // Zapisujemy ciasteczko z pamięcią tylko wtedy, gdy zaznaczono checkbox
+      if (rememberMe) {
+        const maxAgeStr = "; max-age=" + (30 * 24 * 60 * 60);
+        document.cookie = "email=" + data.user.email + "; path=/" + maxAgeStr;
+      } else {
+        // Zwykłe ciasteczko sesyjne bez max-age
+        document.cookie = "email=" + data.user.email + "; path=/";
+      }
+
       state.auth.error = data.message;
-      document.cookie = "email=" + data.user.email + ";";
       state.auth.loggedIn = true;
-      state.auth.user = { email: data.user.email};
+      state.auth.user = { email: data.user.email };
       checkAuth(data.user.email);
       showToast('Zalogowano jako ' + data.user.email + '.');
       state.auth.view = null;
       render();
     } else {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Zaloguj się';
+      }
       state.auth.error = data.message;
       render();
     }
   } catch (err) {
     console.error('[DEBUG] Błąd przetworzenia odpowiedzi:', err);
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Zaloguj się';
+    }
     state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
     render();
   }
 }
 
 checkP24Status();
-
