@@ -39,6 +39,7 @@ export async function render(){
     }
     else{
         var email = getCookie('email');
+        console.log(state.viewingReservationId);
         body = state.viewingReservationId
             ? await renderReservationDetail(state.viewingReservationId)
             : await renderRezerwacje(email);

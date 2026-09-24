@@ -1,324 +1,693 @@
 import { state, fetchBookedHoursFromServer } from '../state.js';
 
 import {
-    DATES,
-    TODAY,
-    pad,
-    toDateStr
+  DATES,
+  TODAY,
+  pad,
+  toDateStr
 } from '../utils.js';
 
 import { render } from './render.js';
-import { checkAuth } from './helpers.js';
+import { checkAuth, getCookie } from './helpers.js';
 
 let overlayTimer = null;
 
-function goToReservationDetail(id){
+function goToReservationDetail(id) {
   state.overlay = null;
   state.tab = 'rezerwacje';
   state.viewingReservationId = id;
   state.selectedCourtId = null;
-  state.pick = { from:null, to:null };
+  state.pick = { from: null, to: null };
   state.showReturnForm = false;
   state.returnFormError = null;
   render();
 }
 
-function showToast(msg){
+function showToast(msg) {
   state.toast = msg;
   render();
-  setTimeout(()=>{ state.toast = null; render(); }, 3200);
+
+  setTimeout(() => {
+    state.toast = null;
+    render();
+  }, 3200);
 }
 
-async function goToPaymentFlow(){
+async function goToPaymentFlow() {
   const courts = await state.courts;
-  const court = courts.find(c=>c.id===state.selectedCourtId);
+
+  const court = courts.find(
+    c => c.id === state.selectedCourtId
+  );
+
   const from = state.pick.from;
   const to = state.pick.to;
+
   state.pendingPayment = {
     courtId: court.id,
     dateIndex: state.selectedDateIndex,
-    from, to,
-    price: (to-from) * court.price
+    from,
+    to,
+    price: (to - from) * court.price
   };
+
   state.selectedBank = null;
 }
 
 document.getElementById('app').addEventListener('click', async (e) => {
+
   const btn = e.target.closest('[data-action]');
-  if(!btn) return;
+  if (!btn) return;
+
   const action = btn.dataset.action;
 
-  if(action==='set-tab'){
+  if(action === 'pick-from' || action === 'pick-to'){
+      return;
+  }
+
+  if (action === 'set-tab') {
+
     state.tab = btn.dataset.tab;
-    if(state.tab==='korty') state.selectedCourtId = null;
+
+    if (state.tab === 'korty') {
+      state.selectedCourtId = null;
+    }
+
     state.pendingPayment = null;
     state.selectedBank = null;
     state.viewingReservationId = null;
     state.showReturnForm = false;
     state.returnFormError = null;
   }
-else if(action==='open-court'){
+
+  else if (action === 'open-court') {
+
     state.selectedCourtId = Number(btn.dataset.id);
     state.selectedDateIndex = 0;
-    state.pick = { from:null, to:null };
+    state.pick = {
+      from: null,
+      to: null
+    };
 
-    // Pobieramy zajęte godziny z PHP przed renderowaniem
-    const dateStr = toDateStr(DATES[state.selectedDateIndex]);
-    state.bookedHours = await fetchBookedHoursFromServer(state.selectedCourtId, dateStr);
-  }
-  else if(action==='set-date'){
-    state.selectedDateIndex = Number(btn.dataset.index);
-    state.pick = { from:null, to:null };
+    const dateStr = toDateStr(
+      DATES[state.selectedDateIndex]
+    );
 
-    // Pobieramy zajęte godziny dla nowo wybranej daty
-    const dateStr = toDateStr(DATES[state.selectedDateIndex]);
-    state.bookedHours = await fetchBookedHoursFromServer(state.selectedCourtId, dateStr);
+    state.bookedHours =
+      await fetchBookedHoursFromServer(
+        state.selectedCourtId,
+        dateStr
+      );
   }
-  else if(action==='back-to-korty'){
+
+  else if (action === 'set-date') {
+
+    state.selectedDateIndex =
+      Number(btn.dataset.index);
+
+    state.pick = {
+      from: null,
+      to: null
+    };
+
+    const dateStr = toDateStr(
+      DATES[state.selectedDateIndex]
+    );
+
+    state.bookedHours =
+      await fetchBookedHoursFromServer(
+        state.selectedCourtId,
+        dateStr
+      );
+  }
+
+  else if (action === 'back-to-korty') {
+
     state.selectedCourtId = null;
-    state.pick = { from:null, to:null };
+
+    state.pick = {
+      from: null,
+      to: null
+    };
   }
-  else if(action==='quick-pick'){
+
+  else if (action === 'quick-pick') {
+
     const h = Number(btn.dataset.hour);
+
     state.pick.from = h;
-    state.pick.to = h+1;
+    state.pick.to = h + 1;
   }
-  else if(action==='go-to-payment'){
-    if(!state.auth.loggedIn){
+
+  else if (action === 'go-to-payment') {
+
+    if (!state.auth.loggedIn) {
+
       state.auth.view = 'login';
       state.auth.error = null;
       state.auth.resumeToPayment = true;
+
     } else {
-      goToPaymentFlow();
+
+      await goToPaymentFlow();
     }
   }
-  else if(action==='cancel-payment'){
+
+  else if (action === 'cancel-payment') {
+
     state.pendingPayment = null;
     state.selectedBank = null;
   }
-  else if(action==='select-bank'){
+
+  else if (action === 'select-bank') {
+
     state.selectedBank = btn.dataset.bank;
   }
-  else if(action==='pay'){
+
+  else if (action === 'pay') {
+
     const pb = state.pendingPayment;
-    const court = state.courts.find(c=>c.id===pb.courtId);
+
+    const court =
+      state.courts.find(
+        c => c.id === pb.courtId
+      );
+
     const bank = state.selectedBank;
 
     state.overlay = {
-      stage:'processing',
-      courtName: court.name, from: pb.from, to: pb.to, price: pb.price
+      stage: 'processing',
+      courtName: court.name,
+      from: pb.from,
+      to: pb.to,
+      price: pb.price
     };
+
     render();
 
     clearTimeout(overlayTimer);
+
     overlayTimer = setTimeout(() => {
-      const id = 'r'+Date.now();
+
+      const id = 'r' + Date.now();
+
       state.reservations.push({
-        id, courtId: pb.courtId, dateStr: toDateStr(DATES[pb.dateIndex]), dateIndex: pb.dateIndex,
-        startHour: pb.from, endHour: pb.to, price: pb.price, bank
+        id,
+        courtId: pb.courtId,
+        dateStr: toDateStr(
+          DATES[pb.dateIndex]
+        ),
+        dateIndex: pb.dateIndex,
+        startHour: pb.from,
+        endHour: pb.to,
+        price: pb.price,
+        bank
       });
+
       state.transactions.unshift({
-        id:'t'+Date.now(),
+        id: 't' + Date.now(),
         dateStr: toDateStr(TODAY),
-        desc:`Rezerwacja — ${court.name}, ${pad(pb.from)}:00–${pad(pb.to)}:00`,
+        desc:
+          `Rezerwacja — ${court.name}, ` +
+          `${pad(pb.from)}:00–${pad(pb.to)}:00`,
         amount: pb.price,
-        status:'done'
+        status: 'done'
       });
+
       state.pendingPayment = null;
       state.selectedBank = null;
-      state.overlay = { stage:'success', courtName: court.name, from: pb.from, to: pb.to, price: pb.price, reservationId: id };
+
+      state.overlay = {
+        stage: 'success',
+        courtName: court.name,
+        from: pb.from,
+        to: pb.to,
+        price: pb.price,
+        reservationId: id
+      };
+
       render();
 
-      overlayTimer = setTimeout(() => goToReservationDetail(id), 1600);
+      overlayTimer = setTimeout(
+        () => goToReservationDetail(id),
+        1600
+      );
+
     }, 1500);
+
     return;
   }
-  else if(action==='skip-to-details'){
+
+  else if (action === 'skip-to-details') {
+
     clearTimeout(overlayTimer);
-    goToReservationDetail(state.overlay.reservationId);
+
+    goToReservationDetail(
+      state.overlay.reservationId
+    );
+
     return;
   }
-  else if(action==='view-details'){
-    state.viewingReservationId = btn.dataset.id;
+
+  else if (action === 'view-details') {
+
+    state.viewingReservationId =
+      btn.dataset.id;
+
     state.showReturnForm = false;
     state.returnFormError = null;
   }
-  else if(action==='back-to-list'){
+
+  else if (action === 'back-to-list') {
+
     state.viewingReservationId = null;
     state.showReturnForm = false;
     state.returnFormError = null;
   }
-  else if(action==='goto-rezerwacje'){
+
+  else if (action === 'goto-rezerwacje') {
+
     state.tab = 'rezerwacje';
   }
-  else if(action==='open-return'){
-    state.viewingReservationId = btn.dataset.id;
+
+  else if (action === 'open-return') {
+
+    state.viewingReservationId =
+      btn.dataset.id;
+
     state.showReturnForm = true;
     state.returnFormError = null;
   }
-  else if(action==='request-return'){
+
+  else if (action === 'request-return') {
+
     state.showReturnForm = true;
     state.returnFormError = null;
   }
-  else if(action==='cancel-return-form'){
+
+  else if (action === 'cancel-return-form') {
+
     state.showReturnForm = false;
     state.returnFormError = null;
   }
-  else if(action==='submit-return'){
-    const reason = document.getElementById('returnReasonSelect').value;
-    const note = document.getElementById('returnNoteInput').value.trim();
-    if(!reason){
-      state.returnFormError = 'Wybierz powód zwrotu.';
+
+  else if (action === 'submit-return') {
+
+    const reason =
+      document.getElementById(
+        'returnReasonSelect'
+      ).value;
+
+    const note =
+      document.getElementById(
+        'returnNoteInput'
+      ).value.trim();
+
+    if (!reason) {
+
+      state.returnFormError =
+        'Wybierz powód zwrotu.';
+
     } else {
-      const r = state.reservations.find(x=>x.id===btn.dataset.id);
-      if(r){
-        r.returnRequest = { reason, note, status:'pending', requestedAt: toDateStr(new Date()) };
+
+      const r =
+        state.reservations.find(
+          x => x.id === btn.dataset.id
+        );
+
+      if (r) {
+
+        r.returnRequest = {
+          reason,
+          note,
+          status: 'pending',
+          requestedAt:
+            toDateStr(new Date())
+        };
       }
+
       state.showReturnForm = false;
       state.returnFormError = null;
-      showToast('Prośba o zwrot została wysłana do obsługi.');
+
+      showToast(
+        'Prośba o zwrot została wysłana do obsługi.'
+      );
+
       return;
     }
   }
-  else if(action==='approve-return'){
-    const r = state.reservations.find(x=>x.id===btn.dataset.id);
-    if(r){
-      const court = state.courts.find(c=>c.id===r.courtId);
-      state.reservations = state.reservations.filter(x=>x.id!==r.id);
-      if(state.viewingReservationId===r.id) state.viewingReservationId = null;
+
+  else if (action === 'approve-return') {
+
+    const r =
+      state.reservations.find(
+        x => x.id === btn.dataset.id
+      );
+
+    if (r) {
+
+      const court =
+        state.courts.find(
+          c => c.id === r.courtId
+        );
+
+      state.reservations =
+        state.reservations.filter(
+          x => x.id !== r.id
+        );
+
+      if (
+        state.viewingReservationId === r.id
+      ) {
+        state.viewingReservationId = null;
+      }
+
       state.transactions.unshift({
-        id:'t'+Date.now(),
+        id: 't' + Date.now(),
         dateStr: toDateStr(TODAY),
-        desc:`Zwrot zatwierdzony — ${court.name}, ${pad(r.startHour)}:00–${pad(r.endHour)}:00`,
+        desc:
+          `Zwrot zatwierdzony — ${court.name}, ` +
+          `${pad(r.startHour)}:00–${pad(r.endHour)}:00`,
         amount: r.price,
-        status:'cancelled'
+        status: 'cancelled'
       });
-      showToast('Zwrot został zatwierdzony.');
+
+      showToast(
+        'Zwrot został zatwierdzony.'
+      );
+
       return;
     }
   }
-  else if(action==='reject-return'){
-    const r = state.reservations.find(x=>x.id===btn.dataset.id);
-    if(r && r.returnRequest){
+
+  else if (action === 'reject-return') {
+
+    const r =
+      state.reservations.find(
+        x => x.id === btn.dataset.id
+      );
+
+    if (r && r.returnRequest) {
+
       r.returnRequest.status = 'rejected';
-      showToast('Prośba o zwrot została odrzucona.');
+
+      showToast(
+        'Prośba o zwrot została odrzucona.'
+      );
+
       return;
     }
   }
-  else if(action==='open-auth'){
-    state.auth.view = btn.dataset.mode || 'login';
+
+  else if (action === 'open-auth') {
+
+    state.auth.view =
+      btn.dataset.mode || 'login';
+
     state.auth.error = null;
   }
-  else if(action==='switch-auth'){
-    state.auth.view = btn.dataset.mode;
+
+  else if (action === 'switch-auth') {
+
+    state.auth.view =
+      btn.dataset.mode;
+
     state.auth.error = null;
   }
-  else if(action==='close-auth'){
+
+  else if (action === 'close-auth') {
+
     state.auth.view = null;
     state.auth.error = null;
     state.auth.resumeToPayment = false;
   }
-  else if(action==='verify-login-2fa'){
-    const input = document.getElementById('auth2FACodeInput');
-    const code = input ? input.value.trim() : '';
+
+  else if (action === 'verify-login-2fa') {
+
+    const input =
+      document.getElementById(
+        'auth2FACodeInput'
+      );
+
+    const code =
+      input ? input.value.trim() : '';
 
     if (!code || code.length !== 6) {
-      state.auth.error = 'Wprowadź poprawny 6-cyfrowy kod.';
+
+      state.auth.error =
+        'Wprowadź poprawny 6-cyfrowy kod.';
+
       render();
+
       return;
     }
 
     try {
-      const res = await fetch('PHP/login/verify_login_2fa.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
-      });
+
+      const res = await fetch(
+        'PHP/login/verify_login_2fa.php',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+          body: JSON.stringify({
+            code
+          })
+        }
+      );
+
       const data = await res.json();
 
       if (data.success) {
+
         state.auth.requires2FA = false;
         state.auth.loggedIn = true;
-        state.auth.user = { id: data.user.id, email: data.user.email, is_admin: data.user.is_admin };
+
+        state.auth.user = {
+          id: data.user.id,
+          email: data.user.email,
+          is_admin: data.user.is_admin
+        };
+
+        // Zapis ciasteczka 2FA z normalnym @
+        document.cookie = "email=" + data.user.email + "; max-age=" + (30 * 24 * 60 * 60) + "; path=/;";
+
         state.auth.view = null;
         state.auth.error = null;
-        
+
         if (typeof checkAuth === 'function') {
-            checkAuth(data.user.email);
+          const sessionID = getCookie('PHPSESSID') || '';
+          await checkAuth(sessionID, data.user.email);
         }
-        
-        showToast('Zalogowano pomyślnie.');
+
+        showToast(
+          'Zalogowano pomyślnie.'
+        );
+
         render();
+
       } else {
-        state.auth.error = data.message;
+
+        state.auth.error =
+          data.message;
+
         render();
       }
+
     } catch (err) {
-      console.error('[DEBUG] Błąd weryfikacji 2FA:', err);
-      state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+
+      console.error(
+        '[DEBUG] Błąd weryfikacji 2FA:',
+        err
+      );
+
+      state.auth.error =
+        'Błąd serwera. Spróbuj ponownie.';
+
       render();
     }
+
     return;
   }
-  else if(action==='cancel-login-2fa'){
+
+  else if (action === 'cancel-login-2fa') {
+
     state.auth.requires2FA = false;
     state.auth.error = null;
+
     render();
+
     return;
   }
-  else if(action==='do-register'){
-    const email = document.getElementById('authEmailInput').value.trim();
-    const login = document.getElementById('authRegLoginInput').value.trim();
-    const password = document.getElementById('authRegPasswordInput').value;
-    const confirm = document.getElementById('authRegConfirmInput').value;
-    if(!email || !login || !password || !confirm){
-      state.auth.error = 'Wypełnij wszystkie pola.';
-    } else if(password !== confirm){
-      state.auth.error = 'Hasła nie są identyczne.';
-    } else if(state.users.some(u => u.login.toLowerCase()===login.toLowerCase())){
-      state.auth.error = 'Ten login jest już zajęty.';
+
+  else if (action === 'do-register') {
+
+    const email =
+      document.getElementById(
+        'authEmailInput'
+      ).value.trim();
+
+    const login =
+      document.getElementById(
+        'authRegLoginInput'
+      ).value.trim();
+
+    const password =
+      document.getElementById(
+        'authRegPasswordInput'
+      ).value;
+
+    const confirm =
+      document.getElementById(
+        'authRegConfirmInput'
+      ).value;
+
+    if (
+      !email ||
+      !login ||
+      !password ||
+      !confirm
+    ) {
+
+      state.auth.error =
+        'Wypełnij wszystkie pola.';
+
+    } else if (password !== confirm) {
+
+      state.auth.error =
+        'Hasła nie są identyczne.';
+
+    } else if (
+      state.users.some(
+        u =>
+          u.login.toLowerCase() ===
+          login.toLowerCase()
+      )
+    ) {
+
+      state.auth.error =
+        'Ten login jest już zajęty.';
+
     } else {
-      state.users.push({ login, password, email, isAdmin:false });
+
+      state.users.push({
+        login,
+        password,
+        email,
+        isAdmin: false
+      });
+
       state.auth.loggedIn = true;
-      state.auth.user = { login, email, isAdmin:false };
+
+      state.auth.user = {
+        login,
+        email,
+        isAdmin: false
+      };
+
       state.auth.error = null;
-      const resume = state.auth.resumeToPayment;
+
+      const resume =
+        state.auth.resumeToPayment;
+
       state.auth.view = null;
       state.auth.resumeToPayment = false;
-      if(resume) goToPaymentFlow();
-      showToast('Konto zostało utworzone. Witaj, ' + login + '!');
+
+      if (resume) {
+        goToPaymentFlow();
+      }
+
+      showToast(
+        'Konto zostało utworzone. Witaj, ' +
+        login +
+        '!'
+      );
+
       return;
     }
   }
-  else if(action==='logout'){
+
+  else if (action === 'logout') {
+
+    try {
+      // Wywołanie skryptu PHP, który usunie sesję z bazy danych
+      await fetch('PHP/login/logout.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    } catch (err) {
+      console.error('[DEBUG] Błąd podczas wylogowywania na serwerze:', err);
+    }
+
     state.auth.loggedIn = false;
     state.auth.user = null;
-    document.cookie = "email=; path=/; max-age=0";
-    document.cookie = "PHPSESSID=; path=/; max-age=0";
-    showToast('Wylogowano.');
+
+    document.cookie =
+      "email=; path=/; max-age=0";
+
+    document.cookie =
+      "PHPSESSID=; path=/; max-age=0";
+
+    showToast(
+      'Wylogowano.'
+    );
+
     render();
+
     return;
   }
-  else if(action==='disable-remember-me'){
-    document.cookie = "email=; path=/; max-age=0";
-    document.cookie = "PHPSESSID=; path=/; max-age=0";
-    showToast('Wyłączono automatyczne logowanie na tym urządzeniu.');
+
+  else if (action === 'disable-remember-me') {
+
+    document.cookie =
+      "email=; path=/; max-age=0";
+
+    document.cookie =
+      "PHPSESSID=; path=/; max-age=0";
+
+    showToast(
+      'Wyłączono automatyczne logowanie na tym urządzeniu.'
+    );
+
     render();
+
     return;
   }
-  else if(action==='set-konto-sub'){
-    state.kontoSub = btn.dataset.sub;
+
+  else if (action === 'set-konto-sub') {
+
+    state.kontoSub =
+      btn.dataset.sub;
+
     state.editingProfile = false;
   }
-  else if(action==='edit-profile'){
+
+  else if (action === 'edit-profile') {
+
     state.editingProfile = true;
   }
-  else if(action==='save-profile'){
-    document.querySelectorAll('[data-field]').forEach(input=>{
-      state.profile[input.dataset.field] = input.value;
-    });
+
+  else if (action === 'save-profile') {
+
+    document
+      .querySelectorAll('[data-field]')
+      .forEach(input => {
+
+        state.profile[
+          input.dataset.field
+        ] = input.value;
+      });
+
     state.editingProfile = false;
-    showToast('Zmiany w profilu zostały zapisane.');
+
+    showToast(
+      'Zmiany w profilu zostały zapisane.'
+    );
+
     return;
   }
 
@@ -326,211 +695,474 @@ else if(action==='open-court'){
 });
 
 document.getElementById('app').addEventListener('change', (e) => {
-  const el = e.target.closest('[data-action]');
-  if(!el) return;
-  const action = el.dataset.action;
+    const el = e.target.closest('[data-action]');
+    if(!el) return;
 
-  if(action==='pick-from'){
-    const v = el.value;
-    state.pick.from = v==='' ? null : Number(v);
-    state.pick.to = v==='' ? null : Number(v)+1;
-  }
-  else if(action==='pick-to'){
-    state.pick.to = Number(el.value);
-  }
+    const action = el.dataset.action;
 
-  render();
+    if(action === 'pick-from'){
+        const v = el.value;
+
+        state.pick.from = v === ''
+            ? null
+            : Number(v);
+
+        state.pick.to = v === ''
+            ? null
+            : Number(v) + 1;
+    }
+    else if(action === 'pick-to'){
+        const v = el.value;
+
+        state.pick.to = v === ''
+            ? null
+            : Number(v);
+    }
+
+    render();
 });
 
-document.getElementById('app').addEventListener('keydown', (e) => {
-  if(e.key !== 'Enter') return;
-  const id = e.target.id;
-  if(id==='authLoginInput' || id==='authPasswordInput'){
-    e.preventDefault();
-    document.querySelector('[data-action="do-login"]')?.click();
-  } else if(id==='authEmailInput' || id==='authRegLoginInput' || id==='authRegPasswordInput' || id==='authRegConfirmInput'){
-    e.preventDefault();
-    document.querySelector('[data-action="do-register"]')?.click();
+
+document.getElementById('app').addEventListener(
+  'keydown',
+  (e) => {
+
+    if (e.key !== 'Enter') return;
+
+    const id = e.target.id;
+
+    if (
+      id === 'authLoginInput' ||
+      id === 'authPasswordInput'
+    ) {
+
+      e.preventDefault();
+
+      document
+        .querySelector(
+          '[data-action="do-login"]'
+        )
+        ?.click();
+
+    }
+
+    else if (
+      id === 'authEmailInput' ||
+      id === 'authRegLoginInput' ||
+      id === 'authRegPasswordInput' ||
+      id === 'authRegConfirmInput'
+    ) {
+
+      e.preventDefault();
+
+      document
+        .querySelector(
+          '[data-action="do-register"]'
+        )
+        ?.click();
+    }
   }
-});
+);
+
 
 export function checkP24Status() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const status = urlParams.get('status');
+
+  const urlParams =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  const status =
+    urlParams.get('status');
 
   if (!status) return;
 
-  const savedPayment = sessionStorage.getItem('p24_pending_payment');
-  const pb = savedPayment ? JSON.parse(savedPayment) : null;
-  sessionStorage.removeItem('p24_pending_payment');
+  const savedPayment =
+    sessionStorage.getItem(
+      'p24_pending_payment'
+    );
+
+  const pb =
+    savedPayment
+      ? JSON.parse(savedPayment)
+      : null;
+
+  sessionStorage.removeItem(
+    'p24_pending_payment'
+  );
 
   if (status === 'success') {
-    const resId = 'r' + Date.now();
-    const courtName = pb?.courtName || 'Kort';
+
+    const resId =
+      'r' + Date.now();
+
+    const courtName =
+      pb?.courtName || 'Kort';
 
     if (pb) {
+
       state.reservations.push({
+
         id: resId,
+
         courtId: pb.courtId,
-        dateStr: toDateStr(DATES[pb.dateIndex] || TODAY),
-        dateIndex: pb.dateIndex || 0,
+
+        dateStr:
+          toDateStr(
+            DATES[pb.dateIndex] ||
+            TODAY
+          ),
+
+        dateIndex:
+          pb.dateIndex || 0,
+
         startHour: pb.from,
+
         endHour: pb.to,
+
         price: pb.price
       });
 
       state.transactions.unshift({
-        id: 't' + Date.now(),
-        dateStr: toDateStr(TODAY),
-        desc: `Rezerwacja — ${courtName}, ${pad(pb.from)}:00–${pad(pb.to)}:00`,
+
+        id:
+          't' + Date.now(),
+
+        dateStr:
+          toDateStr(TODAY),
+
+        desc:
+          `Rezerwacja — ${courtName}, ` +
+          `${pad(pb.from)}:00–${pad(pb.to)}:00`,
+
         amount: pb.price,
+
         status: 'done'
       });
     }
 
     state.overlay = {
+
       stage: 'success',
-      courtName: courtName,
+
+      courtName,
+
       reservationId: resId
     };
 
-    setTimeout(() => {
-      goToReservationDetail(resId);
-    }, 1800);
+    setTimeout(
+      () => {
+        goToReservationDetail(state.reservations.at(0).id);
+      },
+      1800
+    );
 
-  } else if (status === 'error' || status === 'fail') {
-    state.overlay = { stage: 'error' };
   }
 
-  window.history.replaceState({}, document.title, window.location.pathname);
+  else if (
+    status === 'error' ||
+    status === 'fail'
+  ) {
+
+    state.overlay = {
+      stage: 'error'
+    };
+  }
+
+  window.history.replaceState(
+    {},
+    document.title,
+    window.location.pathname
+  );
+
   render();
 }
 
-export async function handleRegister(e) {
-  console.log('[DEBUG] Start wysyłania rejestracji...');
 
-  const container = e ? e.target.closest('.auth-card') : document;
-  const email = container?.querySelector('#authRegEmailInput')?.value?.trim() || document.getElementById('authRegEmailInput')?.value?.trim();
-  const password = container?.querySelector('#authRegPasswordInput')?.value || document.getElementById('authRegPasswordInput')?.value;
-  const confirmPassword = container?.querySelector('#authRegConfirmInput')?.value || document.getElementById('authRegConfirmInput')?.value;
+export async function handleRegister(e) {
+
+  console.log(
+    '[DEBUG] Start wysyłania rejestracji...'
+  );
+
+  const container =
+    e
+      ? e.target.closest('.auth-card')
+      : document;
+
+  const email =
+    container?.querySelector(
+      '#authRegEmailInput'
+    )?.value?.trim()
+    ||
+    document.getElementById(
+      'authRegEmailInput'
+    )?.value?.trim();
+
+  const password =
+    container?.querySelector(
+      '#authRegPasswordInput'
+    )?.value
+    ||
+    document.getElementById(
+      'authRegPasswordInput'
+    )?.value;
+
+  const confirmPassword =
+    container?.querySelector(
+      '#authRegConfirmInput'
+    )?.value
+    ||
+    document.getElementById(
+      'authRegConfirmInput'
+    )?.value;
 
   if (!email || !password) {
-    state.auth.error = 'Wypełnij adres e-mail oraz hasło.';
+
+    state.auth.error =
+      'Wypełnij adres e-mail oraz hasło.';
+
     render();
+
     return;
   }
 
   try {
-    const res = await fetch('PHP/login/register.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-        confirmPassword: confirmPassword,
-        first_name: 'Użytkownik',
-        surname: 'Brak',
-        phone_number: ''
-      })
-    });
 
-    const rawText = await res.text();
-    const data = JSON.parse(rawText);
+    const res = await fetch(
+      'PHP/login/register.php',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+
+        body: JSON.stringify({
+
+          email,
+
+          password,
+
+          confirmPassword,
+
+          first_name: 'Użytkownik',
+
+          surname: 'Brak',
+
+          phone_number: ''
+        })
+      }
+    );
+
+    const rawText =
+      await res.text();
+
+    const data =
+      JSON.parse(rawText);
 
     if (data.success) {
+
       state.auth.view = 'login';
-      state.auth.error = data.message;
+
+      state.auth.error =
+        data.message;
+
       state.user = null;
+
       render();
+
     } else {
-      state.auth.error = data.message;
+
+      state.auth.error =
+        data.message;
+
       render();
     }
+
   } catch (err) {
-    console.error('[DEBUG] Błąd przetworzenia odpowiedzi:', err);
-    state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+
+    console.error(
+      '[DEBUG] Błąd przetworzenia odpowiedzi:',
+      err
+    );
+
+    state.auth.error =
+      'Błąd serwera. Spróbuj ponownie.';
+
     render();
   }
 }
+
 
 export async function handleLogin(e) {
-  console.log("[DEBUG] Start wysyłania logowania...");
 
-  const container = e ? e.target.closest('.auth-card') : document;
-  const emailInput = container?.querySelector('#authEmailInput') || document.getElementById('authEmailInput');
-  const passwordInput = container?.querySelector('#authPasswordInput') || document.getElementById('authPasswordInput');
-  const rememberCheckbox = container?.querySelector('#authRememberCheckbox') || document.getElementById('authRememberCheckbox');
+  console.log(
+    "[DEBUG] Start wysyłania logowania..."
+  );
 
-  const email = emailInput?.value?.trim() || '';
-  const password = passwordInput?.value || '';
-  const rememberMe = rememberCheckbox ? rememberCheckbox.checked : false;
+  const container =
+    e
+      ? e.target.closest('.auth-card')
+      : document;
+
+  const emailInput =
+    container?.querySelector(
+      '#authEmailInput'
+    )
+    ||
+    document.getElementById(
+      'authEmailInput'
+    );
+
+  const passwordInput =
+    container?.querySelector(
+      '#authPasswordInput'
+    )
+    ||
+    document.getElementById(
+      'authPasswordInput'
+    );
+
+  const rememberCheckbox =
+    container?.querySelector(
+      '#authRememberCheckbox'
+    )
+    ||
+    document.getElementById(
+      'authRememberCheckbox'
+    );
+
+  const email =
+    emailInput?.value?.trim() || '';
+
+  const password =
+    passwordInput?.value || '';
+
+  const rememberMe =
+    rememberCheckbox
+      ? rememberCheckbox.checked
+      : false;
+
+  state.auth.email = email;
+  state.auth.password = password;
+  state.auth.rememberMe = rememberMe;
 
   if (!email || !password) {
-    state.auth.error = 'Wypełnij adres e-mail oraz hasło.';
-    render();
-    return;
-  }  
 
-  const submitBtn = container?.querySelector('[data-action="do-login"]') || document.querySelector('[data-action="do-login"]');
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Logowanie...';
+    state.auth.error =
+      'Wypełnij adres e-mail oraz hasło.';
+
+    render();
+
+    return;
   }
 
-  try {
-    const res = await fetch('PHP/login/login.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-      })
-    });
+  state.auth.loading = true;
+  state.auth.error = null;
+  render();
 
-    const rawText = await res.text();
-    const data = JSON.parse(rawText);
+  try {
+
+    const res = await fetch(
+      'PHP/login/login.php',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+
+        body: JSON.stringify({
+
+          email,
+
+          password
+        })
+      }
+    );
+
+    const rawText =
+      await res.text();
+
+    const data =
+      JSON.parse(rawText);
+
+    state.auth.loading = false;
 
     if (data.success) {
+
       if (data.requires_2fa) {
+
         state.auth.requires2FA = true;
-        state.auth.error = data.message;
+
+        state.auth.error =
+          data.message;
+
         render();
+
         return;
       }
-      
-      // Zapisujemy ciasteczko z pamięcią tylko wtedy, gdy zaznaczono checkbox
-      if (rememberMe) {
-        const maxAgeStr = "; max-age=" + (30 * 24 * 60 * 60);
-        document.cookie = "email=" + data.user.email + "; path=/" + maxAgeStr;
-      } else {
-        // Zwykłe ciasteczko sesyjne bez max-age
-        document.cookie = "email=" + data.user.email + "; path=/";
+
+      // Zapis ciasteczka logowania z normalnym @
+      const maxAgeStr = rememberMe ? "; max-age=" + (30 * 24 * 60 * 60) : "";
+      document.cookie = "email=" + data.user.email + maxAgeStr + "; path=/;";
+
+      state.auth.error =
+        data.message;
+
+      state.auth.loggedIn = true;
+
+      state.auth.user = {
+        email: data.user.email
+      };
+
+      state.auth.email = '';
+      state.auth.password = '';
+      state.auth.rememberMe = false;
+
+      if (typeof checkAuth === 'function') {
+        const sessionID = getCookie('PHPSESSID') || '';
+        await checkAuth(sessionID, data.user.email);
       }
 
-      state.auth.error = data.message;
-      state.auth.loggedIn = true;
-      state.auth.user = { email: data.user.email };
-      checkAuth(data.user.email);
-      showToast('Zalogowano jako ' + data.user.email + '.');
+      showToast(
+        'Zalogowano jako ' +
+        data.user.email +
+        '.'
+      );
+
       state.auth.view = null;
+
       render();
+
     } else {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Zaloguj się';
-      }
-      state.auth.error = data.message;
+
+      state.auth.error =
+        data.message;
+      state.auth.password = '';
+
       render();
     }
+
   } catch (err) {
-    console.error('[DEBUG] Błąd przetworzenia odpowiedzi:', err);
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Zaloguj się';
-    }
-    state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+
+    console.error(
+      '[DEBUG] Błąd przetworzenia odpowiedzi:',
+      err
+    );
+
+    state.auth.loading = false;
+    state.auth.password = '';
+
+    state.auth.error =
+      'Błąd serwera. Spróbuj ponownie.';
+
     render();
   }
 }
+
 
 checkP24Status();

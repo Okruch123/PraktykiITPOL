@@ -1,28 +1,28 @@
 import {
   state,
-    HOURS,
-    BANKS,
-    isOccupiedByOthers
-  } from "../../../state.js";
+  HOURS,
+  BANKS,
+  isOccupiedByOthers
+} from "../../../state.js";
 import {
   DAY_NAMES,
-    MONTH_NAMES,
-    pad,
-    toDateStr,
-    addDays,
-    TODAY,
-    NOW_HOUR,
-    DATES
-  } from "../../../utils.js"
-  import {
-    fmtDate,
-    fmtShortDate,
-    courtTag,
-    returnReasonLabel,
-    myReservationAt,
-    isHourFree,
-    nextFreeSlotLabel
-  } from "../../helpers.js"
+  MONTH_NAMES,
+  pad,
+  toDateStr,
+  addDays,
+  TODAY,
+  NOW_HOUR,
+  DATES
+} from "../../../utils.js"
+import {
+  fmtDate,
+  fmtShortDate,
+  courtTag,
+  returnReasonLabel,
+  myReservationAt,
+  isHourFree,
+  nextFreeSlotLabel
+} from "../../helpers.js"
 
 export async function renderCourtDetail(){
   const courts = await state.courts;
@@ -99,7 +99,7 @@ export async function renderCourtDetail(){
       ${state.pick.from!==null ? `
         <div class="picker-summary">
           <div class="picker-summary-text">
-            ${court.name}, ${fmtDate(date)}, ${pad(state.pick.from)}:00–${pad(state.pick.to)}:00 · ${hours} godz.
+            ${court.name}, ${fmtDate(date)},${pad(state.pick.from)}:00–${pad(state.pick.to)}:00 ·${hours} godz.
             <strong>${price} zł</strong>
           </div>
           <button class="picker-cta" data-action="go-to-payment">Przejdź do płatności</button>
@@ -110,12 +110,24 @@ export async function renderCourtDetail(){
 
   return `
     <button class="back-link" data-action="back-to-korty">← Wszystkie korty</button>
+    
     <div class="detail-head">
-      <div class="detail-num">${court.id}</div>
       <div>
         <h2>${court.name}</h2>
-        <div class="detail-meta">${court.surfaceLabel} · ${court.price} zł za godzinę</div>
+        <div class="detail-meta">${court.surfaceLabel} · <strong>${court.price} zł / godz.</strong></div>
       </div>
+    </div>
+
+    <!-- Nowa sekcja z informacjami o korcie -->
+    <div class="court-info-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 8px; margin: 16px 0; display: grid; gap: 8px;">
+      <div style="font-size: 14px; color: #ccc;">
+        📍 <strong>Adres:</strong> ${court.address || 'Brak adresu'}
+      </div>
+      <div style="font-size: 14px; color: #ccc;">
+        🎾 <strong>Typ:</strong> ${court.isOutdoor ? 'Odkryty' : 'Kryty (hala)'} | <strong>Nawierzchnia:</strong> ${court.surfaceLabel}
+      </div>
+      ${court.description ? `<div style="font-size: 14px; color: #aaa; font-style: italic;">${court.description}</div>` : ''}
+      ${court.receptionPhone ? `<div style="font-size: 14px; color: #4ade80;">📞 Recepcja: <a href="tel:${court.receptionPhone}" style="color: inherit; text-decoration: underline;">${court.receptionPhone}</a></div>` : ''}
     </div>
 
     <div class="date-tabs">

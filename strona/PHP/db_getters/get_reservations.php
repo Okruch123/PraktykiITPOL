@@ -27,10 +27,10 @@
     }
 
     try {
-        // Pobieramy rezerwacje powiązane z danym użytkownikiem przez jego e-mail
         $stmt = $pdo->prepare("
             SELECT 
                 r.ID as id,
+                r.codeID as codeID,
                 ri.court_id,
                 ri.reservation_date as date,
                 ri.start_time as begin,
@@ -40,12 +40,11 @@
             JOIN users u ON r.client_ID = u.ID
             JOIN reservation_items ri ON ri.reservation_id = r.ID
             WHERE u.email = ?
-            ORDER BY ri.reservation_date DESC, ri.start_time DESC
+            ORDER BY id DESC
         ");
         $stmt->execute([$email]);
         $reservations = $stmt->fetchAll();
 
-        // Zwracamy czysty JSON z tablicą rezerwacji
         echo json_encode($reservations);
     } catch (PDOException $e) {
         echo json_encode([]);

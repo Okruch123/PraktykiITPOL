@@ -4,6 +4,7 @@ export function renderAuthOverlay(){
   const mode = state.auth.view;
   const err = state.auth.error;
   const requires2FA = state.auth.requires2FA;
+  const isLoading = state.auth.loading;
 
   return `
     <div class="auth-overlay" role="dialog" aria-modal="true">
@@ -41,25 +42,26 @@ export function renderAuthOverlay(){
             <label for="authRegConfirmInput">Powtórz hasło</label>
             <input id="authRegConfirmInput" type="password" autocomplete="new-password">
           </div>
-          <button class="auth-submit 
-            ${state.auth.loading ? 'loading' : ''}" data-action="do-login" ${state.auth.loading ? 'disabled' : ''}>
-            ${state.auth.loading ? 'Logowanie...' : 'Zaloguj się'}
-          </button
+          <button class="auth-submit ${isLoading ? 'loading' : ''}" data-action="do-register" ${isLoading ? 'disabled' : ''}>
+            ${isLoading ? 'Rejestracja...' : 'Załóż konto'}
+          </button>
           <p class="auth-note">Masz już konto? <button class="auth-link-btn" data-action="switch-auth" data-mode="login">Zaloguj się</button></p>
         ` : `
           <div class="auth-field">
             <label for="authEmailInput">E-mail</label>
-            <input id="authEmailInput" type="text" autocomplete="username">
+            <input id="authEmailInput" type="text" autocomplete="username" value="${state.auth.email || ''}">
           </div>
           <div class="auth-field">
             <label for="authPasswordInput">Hasło</label>
-            <input id="authPasswordInput" type="password" autocomplete="current-password">
+            <input id="authPasswordInput" type="password" autocomplete="current-password" value="${state.auth.password || ''}">
           </div>
           <div class="auth-remember-container" style="margin: 10px 0; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="authRememberCheckbox" style="cursor: pointer;">
+            <input type="checkbox" id="authRememberCheckbox" style="cursor: pointer;" ${state.auth.rememberMe ? 'checked' : ''}>
             <label for="authRememberCheckbox" style="cursor: pointer;">Zapamiętaj mnie</label>
           </div>
-          <button class="auth-submit" data-action="do-login">Zaloguj się</button>
+          <button class="auth-submit ${isLoading ? 'loading' : ''}" data-action="do-login" ${isLoading ? 'disabled' : ''}>
+            ${isLoading ? 'Logowanie...' : 'Zaloguj się'}
+          </button>
           <p class="auth-note">Nie masz konta? <button class="auth-link-btn" data-action="switch-auth" data-mode="register">Zarejestruj się</button></p>
         `)}
       </div>

@@ -10,6 +10,7 @@
     echo json_encode([
         "name" => $res["first_name"].($res["second_name"] != "" ? ' ' : '').$res["second_name"].' '.$res["surname"],
         "email" => $email,
-        "phone" => $res["phone_number"]
+        "phone" => $res["phone_number"],
+        "twoFactorEnabled" => $res["twoFactorEnabled"]
     ]);
 ?>

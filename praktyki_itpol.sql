@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Wrz 23, 2026 at 10:49 AM
+-- Generation Time: Wrz 24, 2026 at 12:14 PM
 -- Wersja serwera: 10.4.28-MariaDB
 -- Wersja PHP: 8.2.4
 
@@ -29,17 +29,27 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `courts` (
   `ID` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL DEFAULT 'Kort',
+  `surface_id` int(11) DEFAULT 1,
   `surface_type` int(11) NOT NULL,
   `is_outdoor` tinyint(1) NOT NULL,
-  `address` varchar(255) NOT NULL
+  `address` varchar(255) NOT NULL,
+  `reception_phone` varchar(20) DEFAULT NULL,
+  `price_per_hour` decimal(10,2) NOT NULL DEFAULT 60.00,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `photo` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `courts`
 --
 
-INSERT INTO `courts` (`ID`, `surface_type`, `is_outdoor`, `address`) VALUES
-(1, 1, 1, 'ul. Jakas Tam 34, Szczecin');
+INSERT INTO `courts` (`ID`, `name`, `surface_id`, `surface_type`, `is_outdoor`, `address`, `reception_phone`, `price_per_hour`, `is_active`, `photo`, `description`) VALUES
+(1, 'Kort', 1, 1, 1, 'ul. Jakas Tam 34, Szczecin', '+48 91 123 45 67', 60.00, 1, NULL, NULL),
+(2, 'Kort 1', 1, 0, 0, 'ul. Jakas Tam 34, Szczecin', '+48 91 123 45 67', 60.00, 1, 'kort_1.jpg', 'Kort z mączki ceglanej w hali głównej'),
+(3, 'Kort 2', 2, 0, 1, 'ul. Jakas Tam 34, Szczecin', '+48 91 123 45 67', 55.00, 1, 'kort_2.jpg', 'Kort ze sztuczną trawą, odkryty'),
+(4, 'Kort Centralny', 3, 0, 0, 'ul. Jakas Tam 34, Szczecin', '+48 91 123 45 67', 80.00, 1, 'kort_centralny.jpg', 'Profesjonalny kort z nawierzchnią twardą (Hard) i trybunami');
 
 -- --------------------------------------------------------
 
@@ -75,7 +85,36 @@ INSERT INTO `payments` (`id`, `reservation_id`, `user_id`, `amount`, `currency`,
 (43, 56, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-21 11:08:28', NULL),
 (44, 57, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-21 11:11:51', NULL),
 (45, 58, 8, 780.00, 'PLN', 'przelewy24', 'pending', '2026-09-22 08:34:26', NULL),
-(46, 59, 8, 120.00, 'PLN', 'przelewy24', 'pending', '2026-09-22 08:41:33', NULL);
+(46, 59, 8, 120.00, 'PLN', 'przelewy24', 'pending', '2026-09-22 08:41:33', NULL),
+(47, 60, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:17:50', NULL),
+(48, 61, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:21:47', NULL),
+(49, 62, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:22:07', NULL),
+(50, 63, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:29:16', NULL),
+(51, 64, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:29:38', NULL),
+(52, 65, 6, 240.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:33:50', NULL),
+(53, 66, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:37:12', NULL),
+(54, 67, 6, 360.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:46:01', NULL),
+(55, 68, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:46:56', NULL),
+(56, 69, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:48:54', NULL),
+(57, 70, 6, 55.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 10:57:46', NULL),
+(58, 71, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:01:53', NULL),
+(59, 72, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:05:14', NULL),
+(60, 73, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:06:15', NULL),
+(61, 74, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:07:08', NULL),
+(62, 75, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:08:20', NULL),
+(63, 76, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:10:04', NULL),
+(64, 77, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:12:59', NULL),
+(65, 78, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:15:55', NULL),
+(66, 79, 8, 80.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:16:14', NULL),
+(67, 80, 8, 275.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:16:54', NULL),
+(68, 81, 8, 275.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:17:40', NULL),
+(69, 82, 8, 80.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:18:18', NULL),
+(70, 83, 8, 80.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:28:40', NULL),
+(71, 84, 8, 80.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:30:53', NULL),
+(72, 85, 8, 80.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:31:33', NULL),
+(73, 86, 8, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:48:13', NULL),
+(74, 87, 8, 55.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 11:58:20', NULL),
+(75, 88, 6, 60.00, 'PLN', 'przelewy24', 'pending', '2026-09-24 12:11:34', NULL);
 
 -- --------------------------------------------------------
 
@@ -110,7 +149,36 @@ INSERT INTO `payment_transactions` (`id`, `payment_id`, `provider_transaction_id
 (43, 43, NULL, 'p24_1789981708_427', 'pending', 60.00, '2026-09-21 11:08:28', '2026-09-21 11:08:28'),
 (44, 44, NULL, 'p24_1789981911_669', 'pending', 60.00, '2026-09-21 11:11:51', '2026-09-21 11:11:51'),
 (45, 45, NULL, 'p24_1790058866_491', 'pending', 780.00, '2026-09-22 08:34:26', '2026-09-22 08:34:26'),
-(46, 46, NULL, 'p24_1790059293_902', 'pending', 120.00, '2026-09-22 08:41:33', '2026-09-22 08:41:33');
+(46, 46, NULL, 'p24_1790059293_902', 'pending', 120.00, '2026-09-22 08:41:33', '2026-09-22 08:41:33'),
+(47, 47, NULL, 'p24_1790237870_138', 'pending', 60.00, '2026-09-24 10:17:50', '2026-09-24 10:17:50'),
+(48, 48, NULL, 'p24_1790238107_875', 'pending', 60.00, '2026-09-24 10:21:47', '2026-09-24 10:21:47'),
+(49, 49, NULL, 'p24_1790238127_682', 'pending', 60.00, '2026-09-24 10:22:07', '2026-09-24 10:22:07'),
+(50, 50, NULL, 'p24_1790238556_441', 'pending', 60.00, '2026-09-24 10:29:16', '2026-09-24 10:29:16'),
+(51, 51, NULL, 'p24_1790238578_911', 'pending', 60.00, '2026-09-24 10:29:38', '2026-09-24 10:29:38'),
+(52, 52, NULL, 'p24_1790238830_352', 'pending', 240.00, '2026-09-24 10:33:50', '2026-09-24 10:33:50'),
+(53, 53, NULL, 'p24_1790239032_427', 'pending', 60.00, '2026-09-24 10:37:12', '2026-09-24 10:37:12'),
+(54, 54, NULL, 'p24_1790239561_799', 'pending', 360.00, '2026-09-24 10:46:01', '2026-09-24 10:46:01'),
+(55, 55, NULL, 'p24_1790239616_543', 'pending', 60.00, '2026-09-24 10:46:56', '2026-09-24 10:46:56'),
+(56, 56, NULL, 'p24_1790239734_469', 'pending', 60.00, '2026-09-24 10:48:54', '2026-09-24 10:48:54'),
+(57, 57, NULL, 'p24_1790240266_273', 'pending', 55.00, '2026-09-24 10:57:46', '2026-09-24 10:57:46'),
+(58, 58, NULL, 'p24_1790240513_981', 'pending', 60.00, '2026-09-24 11:01:53', '2026-09-24 11:01:53'),
+(59, 59, NULL, 'p24_1790240714_349', 'pending', 60.00, '2026-09-24 11:05:14', '2026-09-24 11:05:14'),
+(60, 60, NULL, 'p24_1790240775_603', 'pending', 60.00, '2026-09-24 11:06:15', '2026-09-24 11:06:15'),
+(61, 61, NULL, 'p24_1790240828_542', 'pending', 60.00, '2026-09-24 11:07:08', '2026-09-24 11:07:08'),
+(62, 62, NULL, 'p24_1790240900_241', 'pending', 60.00, '2026-09-24 11:08:20', '2026-09-24 11:08:20'),
+(63, 63, NULL, 'p24_1790241004_936', 'pending', 60.00, '2026-09-24 11:10:04', '2026-09-24 11:10:04'),
+(64, 64, NULL, 'p24_1790241179_634', 'pending', 60.00, '2026-09-24 11:12:59', '2026-09-24 11:12:59'),
+(65, 65, NULL, 'p24_1790241355_453', 'pending', 60.00, '2026-09-24 11:15:55', '2026-09-24 11:15:55'),
+(66, 66, NULL, 'p24_1790241374_613', 'pending', 80.00, '2026-09-24 11:16:14', '2026-09-24 11:16:14'),
+(67, 67, NULL, 'p24_1790241414_107', 'pending', 275.00, '2026-09-24 11:16:54', '2026-09-24 11:16:54'),
+(68, 68, NULL, 'p24_1790241460_765', 'pending', 275.00, '2026-09-24 11:17:40', '2026-09-24 11:17:40'),
+(69, 69, NULL, 'p24_1790241498_105', 'pending', 80.00, '2026-09-24 11:18:18', '2026-09-24 11:18:18'),
+(70, 70, NULL, 'p24_1790242120_642', 'pending', 80.00, '2026-09-24 11:28:40', '2026-09-24 11:28:40'),
+(71, 71, NULL, 'p24_1790242253_324', 'pending', 80.00, '2026-09-24 11:30:53', '2026-09-24 11:30:53'),
+(72, 72, NULL, 'p24_1790242293_936', 'pending', 80.00, '2026-09-24 11:31:33', '2026-09-24 11:31:33'),
+(73, 73, NULL, 'p24_1790243293_427', 'pending', 60.00, '2026-09-24 11:48:13', '2026-09-24 11:48:13'),
+(74, 74, NULL, 'p24_1790243900_496', 'pending', 55.00, '2026-09-24 11:58:20', '2026-09-24 11:58:20'),
+(75, 75, NULL, 'p24_1790244694_549', 'pending', 60.00, '2026-09-24 12:11:34', '2026-09-24 12:11:34');
 
 -- --------------------------------------------------------
 
@@ -128,18 +196,6 @@ CREATE TABLE `pending_users` (
   `surname` varchar(30) NOT NULL,
   `verification_token` varchar(32) NOT NULL,
   `verification_expiration_date` date NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Struktura tabeli dla tabeli `prices`
---
-
-CREATE TABLE `prices` (
-  `court_ID` int(11) NOT NULL,
-  `tax_vat` int(11) NOT NULL,
-  `price` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -187,7 +243,36 @@ INSERT INTO `reservations` (`ID`, `court_ID`, `client_ID`, `codeID`) VALUES
 (56, 1, 8, 'SET-0719E95C'),
 (57, 1, 8, 'SET-A8931B7E'),
 (58, 1, 8, 'SET-A0E8379E'),
-(59, 1, 8, 'SET-9B7BCDD1');
+(59, 1, 8, 'SET-9B7BCDD1'),
+(60, 1, 8, 'SET-BB351CF9'),
+(61, 1, 8, 'SET-D0AEB0CA'),
+(62, 1, 8, 'SET-29DB0215'),
+(63, 1, 8, 'SET-D967B181'),
+(64, 1, 8, 'SET-4255FF57'),
+(65, 1, 6, 'SET-F38AFFE6'),
+(66, 1, 8, 'SET-6132F640'),
+(67, 1, 6, 'SET-E1550340'),
+(68, 1, 8, 'SET-B2BDEF17'),
+(69, 1, 8, 'SET-1D5E7BAD'),
+(70, 3, 6, 'SET-9A288280'),
+(71, 2, 8, 'SET-8AAB4CB4'),
+(72, 2, 8, 'SET-B82566A5'),
+(73, 2, 8, 'SET-EC8BFE8F'),
+(74, 2, 8, 'SET-38A62E1F'),
+(75, 2, 8, 'SET-83E89F59'),
+(76, 1, 8, 'SET-B42AAEFA'),
+(77, 1, 8, 'SET-3E898DDB'),
+(78, 1, 8, 'SET-3F374A34'),
+(79, 4, 8, 'SET-2D988794'),
+(80, 3, 8, 'SET-ABC15624'),
+(81, 3, 8, 'SET-4420410E'),
+(82, 4, 8, 'SET-0EB84F38'),
+(83, 4, 8, 'SET-0AA6E0C6'),
+(84, 4, 8, 'SET-5B170E1F'),
+(85, 4, 8, 'SET-AE751A45'),
+(86, 1, 8, 'SET-DE7CD803'),
+(87, 3, 8, 'SET-506FF36C'),
+(88, 1, 6, 'SET-BA59D953');
 
 -- --------------------------------------------------------
 
@@ -237,7 +322,57 @@ INSERT INTO `reservation_items` (`id`, `reservation_id`, `court_id`, `reservatio
 (43, 56, 1, '2026-09-21', 19, 20, 60.00),
 (44, 57, 1, '2026-09-21', 20, 21, 60.00),
 (45, 58, 1, '2026-09-22', 9, 22, 780.00),
-(46, 59, 1, '2026-09-23', 12, 14, 120.00);
+(46, 59, 1, '2026-09-23', 12, 14, 120.00),
+(47, 60, 1, '2026-09-24', 11, 12, 60.00),
+(48, 61, 1, '2026-09-24', 12, 13, 60.00),
+(49, 62, 1, '2026-09-24', 13, 14, 60.00),
+(50, 63, 1, '2026-09-24', 14, 15, 60.00),
+(51, 64, 1, '2026-09-24', 15, 16, 60.00),
+(52, 65, 1, '2026-09-24', 17, 21, 240.00),
+(53, 66, 1, '2026-09-24', 16, 17, 60.00),
+(54, 67, 1, '2026-09-25', 11, 17, 360.00),
+(55, 68, 1, '2026-09-24', 21, 22, 60.00),
+(56, 69, 1, '2026-09-25', 7, 8, 60.00),
+(57, 70, 3, '2026-09-27', 7, 8, 55.00),
+(58, 71, 2, '2026-09-24', 12, 13, 60.00),
+(59, 72, 2, '2026-09-24', 13, 14, 60.00),
+(60, 73, 2, '2026-09-24', 14, 15, 60.00),
+(61, 74, 2, '2026-09-24', 15, 16, 60.00),
+(62, 75, 2, '2026-09-24', 16, 17, 60.00),
+(63, 76, 1, '2026-09-25', 8, 9, 60.00),
+(64, 77, 1, '2026-09-25', 9, 10, 60.00),
+(65, 78, 1, '2026-09-25', 10, 11, 60.00),
+(66, 79, 4, '2026-09-24', 12, 13, 80.00),
+(67, 80, 3, '2026-09-24', 12, 17, 275.00),
+(68, 81, 3, '2026-09-24', 17, 22, 275.00),
+(69, 82, 4, '2026-09-24', 13, 14, 80.00),
+(70, 83, 4, '2026-09-24', 14, 15, 80.00),
+(71, 84, 4, '2026-09-24', 15, 16, 80.00),
+(72, 85, 4, '2026-09-24', 16, 17, 80.00),
+(73, 86, 1, '2026-09-25', 17, 18, 60.00),
+(74, 87, 3, '2026-09-26', 7, 8, 55.00),
+(75, 88, 1, '2026-09-25', 18, 19, 60.00);
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabeli dla tabeli `surfaces`
+--
+
+CREATE TABLE `surfaces` (
+  `id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL COMMENT 'Nazwa nawierzchni, np. Mączka, Sztuczna trawa, Hard',
+  `description` text DEFAULT NULL COMMENT 'Opcjonalny opis nawierzchni'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `surfaces`
+--
+
+INSERT INTO `surfaces` (`id`, `name`, `description`) VALUES
+(1, 'Mączka ceglana', 'Klasyczna nawierzchnia tenisowa'),
+(2, 'Sztuczna trawa', 'Nawierzchnia z piaskiem kwarcowym'),
+(3, 'Nawierzchnia twarda (Hard)', 'Akrylowa, szybka nawierzchnia');
 
 -- --------------------------------------------------------
 
@@ -261,7 +396,7 @@ CREATE TABLE `two_factor_codes` (
 
 INSERT INTO `two_factor_codes` (`id`, `user_id`, `code`, `action`, `expires_at`, `used`, `created_at`) VALUES
 (34, 8, '413651', 'disable', '2026-09-21 10:08:14', 1, '2026-09-21 09:58:14'),
-(35, 6, '379450', 'enable', '2026-09-22 08:48:35', 1, '2026-09-22 08:38:35');
+(64, 6, '173529', 'enable', '2026-09-24 12:20:08', 1, '2026-09-24 12:10:08');
 
 -- --------------------------------------------------------
 
@@ -287,7 +422,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`ID`, `email`, `password_hash`, `registration_date`, `phone_number`, `first_name`, `second_name`, `surname`, `is_admin`, `twoFactorEnabled`) VALUES
-(6, 'oskarjablonski061@gmail.com', '$2y$10$vvZjJV5iQ5HbK5coZ/QQR.vabdi2x3tLCuzOV66ZfOMhLv/WTV0GC', '0000-00-00', '', 'oskarjablonski061@gmail.com', '', 'Brak', 0, 1),
+(6, 'oskarjablonski061@gmail.com', '$2y$10$vvZjJV5iQ5HbK5coZ/QQR.vabdi2x3tLCuzOV66ZfOMhLv/WTV0GC', '2026-09-17', '', 'oskarjablonski061@gmail.com', '', 'Brak', 0, 1),
 (8, 'czubaksebastian21@gmail.com', '$2y$10$a90VFLf2J9kmawO5mBjvP.J4E23M28Y0IqsroT3K0NsCTxF1R6M9O', '2026-09-17', '+48782228148', 'Sebastian', NULL, 'Czubak', 0, 0);
 
 -- --------------------------------------------------------
@@ -306,88 +441,9 @@ CREATE TABLE `users_sessions` (
 --
 
 INSERT INTO `users_sessions` (`user_id`, `session`) VALUES
-(6, 'lp7vcag45oo3tfapsjuhcmah8e'),
-(6, 'ktduc33gmrfi5evim558gtur9n'),
-(6, '7qvs9nn7j674pjtlsehq30log3'),
-(6, 'tr5o6npd17ejfflgevhqfh09o7'),
-(6, 'mjs092io9natkdqtu87ff0kr0q'),
-(6, '4vopj71lu78hjmopmoleh3c7r8'),
-(6, 'k0oq4t4l276a66s8oht5r8qoq6'),
-(6, '52s7n6l2bid2mgsi0t49ir1tpm'),
-(6, '1qtr0fkbqjj078cd5o7v4r9ch5'),
-(6, 'ur3s3ntj3tluvg57gt4vpq2fav'),
-(6, 'nd6tgag7d7phka7bbkm2lj9ghm'),
-(6, 'povhgq3nhvkt4bpc8i10fpsc5q'),
-(6, 'q00qn8t2bl1dbelbnme5hn7nc5'),
-(6, '5fn4ne6p4o6ha8rneeql6i99sc'),
-(6, 'lt2ruihk9ons5pm5eu35chvuip'),
-(6, 'o8sdhgt1i6cpe9iai5ktd4bq0t'),
-(6, 'ma64u9a9u93946godobgb541dr'),
-(6, '62h9g1aa8jkcidisng9hjkl3dp'),
-(7, '0m6rsuvsa9o69mlbau38khgqut'),
-(7, 'h6bo5kkoh64ndafo2fmsi41qrr'),
-(7, 'h848apid2fp2r372be5be5nh7p'),
-(7, 'edtni6qgmoqurh209u2qqjrs45'),
-(6, 'p84h4fbcie5ka2p1m3fjsutdm2'),
-(6, 'jop4k89u6bcnkm1sa0ljs3dsb8'),
-(6, '3f5enpeqn4mp0sjoas6g93h8ol'),
-(6, '8buiuh2b3r9gsj8uds21jp1nso'),
-(6, '35u50a3mqlmu359p8he3jqh438'),
-(6, '0inggk1a2cef3591tnbfla7t7r'),
-(6, 'cul2gdchnia9acgj1tnj9lvofo'),
-(8, '4ub04qr1u2ilp76a5jbt0ftqk0'),
-(8, 'd4lujht6prpludu08f4jk2bg1l'),
-(6, 'dstsvspluuobeai3l6i7mdd93f'),
-(6, 'j0rud1rfj974ntptf96b5enp33'),
-(6, 'hd9gmodm4ear1c3k31kqp5hg3t'),
-(8, '9970djdb8actj97itfmfnttla7'),
-(6, '06mvn56b5qqtmnu4kdf3m3f574'),
-(6, 'l7l0bk5vvc87qk22eui4c97nm3'),
-(6, 'ov7uh4s46l7pt1r4eel0gvn9be'),
-(6, 'mtouj6lenbm739ce05hcgdn8e8'),
-(6, 'anh38trclo2t14u526ce2dq5gb'),
-(6, 'g6cp62870677shq5aegvgl213d'),
-(8, 'mt4q31ustdrdbuud71mu41a9vp'),
-(6, '2pcbs7cpbo4hbj7tufkag2upvf'),
-(6, 'ae5cnlbbtdlkdjqdjhvmsdhaka'),
-(6, 'rkc2q9q3phlci72chl06bcrcas'),
-(6, 'ja6ag1q5g0ha4680brs2gk96ra'),
-(6, 'pd8l2i6kosukq061sn8bjai0u9'),
-(6, 'od4dv48d676ls381mdqvt0oifd'),
-(6, 'b6e78eskaj4efdmaovd964rq5n'),
-(8, 't98s5agu2mhvp22tsk09kgmnrn'),
-(8, '4of2h401kvu292245vn3oqii34'),
-(6, 't860hn4bljjlb4if88qiv9gsk5'),
-(6, 'ckolb7jif1h7pcdpaljbuhh4ma'),
-(8, '880bqoeidknb7j0re9548pbv5b'),
-(6, 'kktmqh3u2jnrivm20qqjib34bu'),
-(6, 'bnh8qs938q7b7h0unhkqvjv6d4'),
-(6, 'fbk6po2g8fdlvim586ihuvti8p'),
-(6, 'qjislc0d5169d0n4m5u6e7i0tq'),
-(6, 't3fpbb13son6fnpnibqi61sr6n'),
-(6, 'kn2egigk6a1rtassr5f12cq011'),
-(6, 'euga03tct8afnqakmiebean23c'),
-(8, '4cbva0136reiipac1ltnlovi14'),
-(6, 'elm01gb0g6vkhm8eeq50nm4h7t'),
-(6, 'qfhmvd595ejli7f82tft6vg5ud'),
-(8, '76tuq03ts40spi7crrldt97f2q'),
-(6, 'i0upokguueeafjkg32r845v1bk'),
-(6, '5sv7brpgihmfg31fsa8jmgig44'),
-(8, 'smhv75dhatf0u9g9h8iir9jg63'),
-(6, '7avgkk17shl3mvt19r1edghd3g'),
-(6, 'rh9n61ed6nto91140cg18ed6lh'),
-(8, '3t229qu269jgkq4506bn93s519'),
-(8, '1gqa0q2j0qkpn5listl4o6ltlq'),
-(8, 'n5gmo17qjafg53r9cbfm3rf89i'),
-(8, '00fa0msqp32j942n8ue8g7rcol'),
-(8, 'bre9upep6otkh1t5mtkoc70i30'),
-(8, 'fjn4oacike7310bfsn25vsrvlp'),
-(8, 'nefrrcmsc08eipl7o7hbu3motu'),
-(8, 'dakhgs3dn36pb9srh0ik7cq8ih'),
-(8, '7nfs9rqati3r8rgdb6uddp0bf4'),
-(8, 'kb9c4tu7b1ho13a6ubeci75g7q'),
-(6, 'ohjtm33s4f3gnq3tefd0e0b5jl'),
-(8, '6k4t8tiiqcfitpm0hhnkk0l8er');
+(6, 'pvh0t5cvk8gvs5de5ur3j7d9hk'),
+(8, 'uriqhbe71rikfqc3e3podcttv1'),
+(8, 'c6pa7hg8hjke0t75r9bi5m5asv');
 
 --
 -- Indeksy dla zrzutów tabel
@@ -397,7 +453,8 @@ INSERT INTO `users_sessions` (`user_id`, `session`) VALUES
 -- Indeksy dla tabeli `courts`
 --
 ALTER TABLE `courts`
-  ADD PRIMARY KEY (`ID`);
+  ADD PRIMARY KEY (`ID`),
+  ADD KEY `fk_courts_surface` (`surface_id`);
 
 --
 -- Indeksy dla tabeli `payments`
@@ -451,6 +508,12 @@ ALTER TABLE `reservation_items`
   ADD KEY `court_id` (`court_id`);
 
 --
+-- Indeksy dla tabeli `surfaces`
+--
+ALTER TABLE `surfaces`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indeksy dla tabeli `two_factor_codes`
 --
 ALTER TABLE `two_factor_codes`
@@ -473,19 +536,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `courts`
 --
 ALTER TABLE `courts`
-  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- AUTO_INCREMENT for table `payment_transactions`
 --
 ALTER TABLE `payment_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- AUTO_INCREMENT for table `pending_users`
@@ -503,7 +566,7 @@ ALTER TABLE `receipts`
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
+  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=89;
 
 --
 -- AUTO_INCREMENT for table `reservations_history`
@@ -515,13 +578,19 @@ ALTER TABLE `reservations_history`
 -- AUTO_INCREMENT for table `reservation_items`
 --
 ALTER TABLE `reservation_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
+
+--
+-- AUTO_INCREMENT for table `surfaces`
+--
+ALTER TABLE `surfaces`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `two_factor_codes`
 --
 ALTER TABLE `two_factor_codes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -532,6 +601,12 @@ ALTER TABLE `users`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `courts`
+--
+ALTER TABLE `courts`
+  ADD CONSTRAINT `fk_courts_surface` FOREIGN KEY (`surface_id`) REFERENCES `surfaces` (`id`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `payments`

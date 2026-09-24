@@ -29,6 +29,7 @@ export async function renderRezerwacje(email) {
   // Zapisujemy pobrane rezerwacje do stanu
   state.reservations = upcoming.map(r => ({
     id: String(r.id),
+    codeID: r.codeID || r.codeid,
     courtId: Number(r.court_id),
     dateStr: r.date,
     startHour: parseInt(r.begin || r.start_time),
@@ -36,6 +37,7 @@ export async function renderRezerwacje(email) {
     price: r.price,
     returnRequest: r.returnRequest || null
   }));
+  console.log(state.reservations);
 
   // BEZPIECZNE POBRANIE KORTÓW (obsługa, gdyby state.courts był promise lub tablicą)
   let courtsArray = [];

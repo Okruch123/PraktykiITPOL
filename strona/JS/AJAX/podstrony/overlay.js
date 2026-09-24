@@ -36,7 +36,7 @@ export function renderOverlay(){
         ${isSuccess ? `Rezerwacja — ${ov.courtName || 'Kort'} została pomyślnie potwierdzona.` : ''}
         ${isError ? 'Transakcja została anulowana lub odrzucona. Spróbuj ponownie.' : ''}
       </div>
-
+      
       ${!isProcessing ? `
         <button class="overlay-cta" data-action="${isSuccess ? 'skip-to-details' : 'close-overlay'}">
           ${isSuccess ? 'Zobacz szczegóły rezerwacji' : 'Zamknij i spróbuj ponownie'}

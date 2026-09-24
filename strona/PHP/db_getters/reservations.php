@@ -15,7 +15,7 @@ try {
     exit;
 }
 
-// --- 2. ODBIÓR DANYCH Z FRONTENDU (JS) + DEBUG ---
+// --- 2. ODBIÓR DANYCH Z FRONTENDU (JS) + DEBUG --- 
 $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true);
 

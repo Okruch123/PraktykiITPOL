@@ -33,7 +33,13 @@ const state = {
         user: null,
         view: null,
         error: null,
-        resumeToPayment: false
+        loading: false,
+        requires2FA: false,
+        resumeToPayment: false,
+        // Pola do zachowania wpisanych danych przy renderowaniu stanu ładowania
+        email: '',
+        password: '',
+        rememberMe: false
     },
 
     profile: {},
