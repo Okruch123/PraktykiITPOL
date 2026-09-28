@@ -3,10 +3,10 @@ import { getCookie } from "../../helpers.js";
 import { getProfileDetails } from "../../../state.js";
 
 export function renderProfil() {
-    const p = state.profile;
+    const p = state.profile || {};
     const editing = state.editingProfile;
 
-    const field = (label, key, value) => `
+    const field = (label, key, value, type = "text", disabled = false) => `
         <div class="profile-row">
             <div class="profile-label">
                 ${label}
@@ -15,11 +15,13 @@ export function renderProfil() {
                 ${editing
                     ? `
                         <input
+                            type="${type}"
                             data-field="${key}"
                             value="${value ?? ''}"
+                            ${disabled ? 'disabled style="width: 100%; padding: 8px; border: 1px solid #444; border-radius: 4px; background: #151515; color: #777; cursor: not-allowed;"' : 'style="width: 100%; padding: 8px; border: 1px solid #444; border-radius: 4px; background: #222; color: #fff;"'}
                         >
                     `
-                    : (value ?? '')
+                    : (value ?? '<span style="color: #777; font-style: italic;">Brak</span>')
                 }
             </div>
         </div>
@@ -29,12 +31,40 @@ export function renderProfil() {
         const twoFAEnabled = Number(p?.twoFactorEnabled) === 1;
 
         return `
-        <div class="profile-card">
+        <div class="profile-card" style="display: flex; flex-direction: column; gap: 15px;">
             ${field('Imię i nazwisko', 'name', p?.name)}
-            ${field('E-mail', 'email', state.auth.user.email)}
-            ${field('Telefon', 'phone', p?.phone)}
+            ${field('E-mail', 'email', state.auth.user.email, 'email', true)}
+            ${field('Telefon', 'phone', p?.phone, 'tel')}
 
-            <div class="profile-row">
+            ${editing ? `
+                <div class="profile-row" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 6px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                    <div class="profile-label" style="font-weight: 600; margin-bottom: 4px;">Zmiana hasła</div>
+                    <div class="profile-value" style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: none;">
+                        <input 
+                            type="password" 
+                            id="profileOldPassword" 
+                            placeholder="Stare hasło (wymagane tylko przy zmianie hasła)" 
+                            style="padding: 8px; border: 1px solid #444; border-radius: 4px; background: #222; color: #fff;"
+                        >
+                        <input 
+                            type="password" 
+                            id="profileNewPassword" 
+                            placeholder="Nowe hasło" 
+                            style="padding: 8px; border: 1px solid #444; border-radius: 4px; background: #222; color: #fff;"
+                        >
+                        <input 
+                            type="password" 
+                            id="profileConfirmPassword" 
+                            placeholder="Powtórz nowe hasło" 
+                            style="padding: 8px; border: 1px solid #444; border-radius: 4px; background: #222; color: #fff;"
+                        >
+                    </div>
+                </div>
+            ` : ''}
+
+            ${state.profileError ? `<div style="color: #e74c3c; font-size: 13px; margin-top: 5px;">${state.profileError}</div>` : ''}
+
+            <div class="profile-row" style="border-top: 1px solid #333; padding-top: 15px; margin-top: 5px;">
                 <div class="profile-label">
                     <div>Weryfikacja dwuetapowa</div>
                     <div style="margin-top: 6px;">
@@ -62,8 +92,8 @@ export function renderProfil() {
                         </button>
                     </div>
 
-                    <div class="twofa-panel" style="margin-top: 0; padding: 18px; border: 1px solid var(--sand-line, #ddd); border-radius: 8px;">
-                        <div style="margin-bottom: 12px; color: var(--muted, #666); font-size: 13px;">
+                    <div class="twofa-panel" style="margin-top: 0; padding: 18px; border: 1px solid #333; border-radius: 8px; background: rgba(0,0,0,0.1);">
+                        <div style="margin-bottom: 12px; color: #aaa; font-size: 13px;">
                             Aby ${twoFAEnabled ? 'wyłączyć' : 'włączyć'} weryfikację dwuetapową, wyślij kod na swój adres e-mail.
                         </div>
 
@@ -71,6 +101,7 @@ export function renderProfil() {
                             type="button"
                             class="twofa-send-btn"
                             data-action="send-2fa-code"
+                            style="padding: 8px 14px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer;"
                         >
                             Wyślij kod
                         </button>
@@ -90,13 +121,14 @@ export function renderProfil() {
                                     maxlength="6"
                                     placeholder="000000"
                                     autocomplete="one-time-code"
-                                    style="width: 120px; padding: 8px;"
+                                    style="width: 120px; padding: 8px; background: #222; border: 1px solid #444; color: #fff; border-radius: 4px;"
                                 >
 
                                 <button
                                     type="button"
                                     class="twofa-confirm-btn"
                                     data-action="confirm-2fa"
+                                    style="padding: 8px 14px; background: #2ecc71; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"
                                 >
                                     Potwierdź
                                 </button>
@@ -109,22 +141,34 @@ export function renderProfil() {
             </div>
         </div>
 
-        <div class="profile-actions">
+        <div class="profile-actions" style="margin-top: 20px;">
             ${editing
                 ? `
-                    <button
-                        type="button"
-                        class="save-btn"
-                        data-action="save-profile"
-                    >
-                        Zapisz zmiany
-                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <button
+                            type="button"
+                            class="save-btn"
+                            data-action="save-profile"
+                            style="padding: 10px 20px; background: #2ecc71; color: #000; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"
+                        >
+                            Zapisz zmiany
+                        </button>
+                        <button
+                            type="button"
+                            class="cancel-btn"
+                            data-action="cancel-profile-edit"
+                            style="padding: 10px 20px; background: #444; color: #fff; border: none; border-radius: 6px; cursor: pointer;"
+                        >
+                            Anuluj
+                        </button>
+                    </div>
                 `
                 : `
                     <button
                         type="button"
                         class="edit-btn"
                         data-action="edit-profile"
+                        style="padding: 10px 20px; background: #3498db; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"
                     >
                         Edytuj profil
                     </button>

@@ -4,7 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 $dbHost = 'localhost';
 $dbName = 'praktyki_itpol';
 $dbUser = 'root';
-$dbPass = '';                
+$dbPass = '';
 
 try {
     $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4", $dbUser, $dbPass, [
@@ -19,7 +19,6 @@ try {
 $courtId = intval($_GET['courtId'] ?? 1);
 $dateStr = trim($_GET['dateStr'] ?? date('Y-m-d'));
 
-// Pobieramy przedziały godzinowe dla aktywnych rezerwacji (status pending lub paid)
 $stmt = $pdo->prepare("
     SELECT ri.start_time, ri.end_time 
     FROM reservation_items ri

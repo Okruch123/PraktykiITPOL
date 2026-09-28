@@ -1,5 +1,5 @@
 import { render } from './AJAX/render.js';
-import { state, getProfileDetails, initCourts } from './state.js';
+import { state, getProfileDetails, initCourts, fetchReservations } from './state.js';
 import { checkAuth, getCookie } from './AJAX/helpers.js';
 
 export async function initializeApp() {
@@ -7,6 +7,7 @@ export async function initializeApp() {
   const savedEmail = getCookie('email');
   const savedSessionID = getCookie('PHPSESSID') || '';
   await getProfileDetails(savedEmail);
+  await fetchReservations(savedEmail);
 
   const urlParams = new URLSearchParams(window.location.search);
   const verifyStatus = urlParams.get('verify_status');

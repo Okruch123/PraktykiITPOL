@@ -9,9 +9,9 @@ export function renderHistoria(){
       ${txs.map(t => `
         <div class="tx-row">
           <div class="tx-date">${fmtShortDate(new Date(t.dateStr))}</div>
-          <div class="tx-desc">${t.desc}</div>
-          <div class="tx-status ${t.status}">${t.status==='done' ? 'Zrealizowana' : 'Anulowana'}</div>
-          <div class="tx-amount">${t.amount} zł</div>
+          <div class="tx-desc">Kort ${t.courtId}</div>
+          <div class="tx-status">${t.startHour} - ${t.endHour}</div>
+          <div class="tx-amount">${t.price} zł</div>
         </div>
       `).join('')}
     </div>

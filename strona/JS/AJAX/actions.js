@@ -471,7 +471,6 @@ document.getElementById('app').addEventListener('click', async (e) => {
           is_admin: data.user.is_admin
         };
 
-        // Zapis ciasteczka 2FA z normalnym @
         document.cookie = "email=" + data.user.email + "; max-age=" + (30 * 24 * 60 * 60) + "; path=/;";
 
         state.auth.view = null;
@@ -522,17 +521,97 @@ document.getElementById('app').addEventListener('click', async (e) => {
     return;
   }
 
+  else if (action === 'send-forgot-code') {
+    const emailInput = document.getElementById('authForgotEmailInput');
+    const email = emailInput ? emailInput.value.trim() : '';
+
+    if (!email) {
+      state.auth.error = 'Wprowadź adres e-mail.';
+      render();
+      return;
+    }
+
+    state.auth.loading = true;
+    state.auth.error = null;
+    state.auth.email = email;
+    render();
+
+    try {
+      const res = await fetch('PHP/login/forgot_password.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      state.auth.loading = false;
+
+      if (data.success) {
+        state.auth.view = 'reset-code';
+        state.auth.error = null;
+        showToast('Kod resetujący został wysłany na e-mail.');
+      } else {
+        state.auth.error = data.message;
+      }
+    } catch (err) {
+      state.auth.loading = false;
+      state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+    }
+    render();
+    return;
+  }
+
+  else if (action === 'submit-new-password') {
+    const codeInput = document.getElementById('authResetCodeInput');
+    const passInput = document.getElementById('authNewPasswordInput');
+    
+    const code = codeInput ? codeInput.value.trim() : '';
+    const password = passInput ? passInput.value : '';
+
+    if (!code || !password) {
+      state.auth.error = 'Wypełnij wszystkie pola.';
+      render();
+      return;
+    }
+
+    state.auth.loading = true;
+    state.auth.error = null;
+    render();
+
+    try {
+      const res = await fetch('PHP/login/reset_password.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: state.auth.email, code, password })
+      });
+      const data = await res.json();
+      state.auth.loading = false;
+
+      if (data.success) {
+        state.auth.view = 'login';
+        state.auth.error = 'Hasło zostało pomyślnie zmienione. Zaloguj się nowym hasłem.';
+        showToast('Hasło zaktualizowane.');
+      } else {
+        state.auth.error = data.message;
+      }
+    } catch (err) {
+      state.auth.loading = false;
+      state.auth.error = 'Błąd serwera. Spróbuj ponownie.';
+    }
+    render();
+    return;
+  }
+
   else if (action === 'do-register') {
 
     const email =
       document.getElementById(
-        'authEmailInput'
+        'authRegEmailInput'
       ).value.trim();
 
     const login =
       document.getElementById(
         'authRegLoginInput'
-      ).value.trim();
+      )?.value?.trim() || '';
 
     const password =
       document.getElementById(
@@ -546,7 +625,6 @@ document.getElementById('app').addEventListener('click', async (e) => {
 
     if (
       !email ||
-      !login ||
       !password ||
       !confirm
     ) {
@@ -559,60 +637,14 @@ document.getElementById('app').addEventListener('click', async (e) => {
       state.auth.error =
         'Hasła nie są identyczne.';
 
-    } else if (
-      state.users.some(
-        u =>
-          u.login.toLowerCase() ===
-          login.toLowerCase()
-      )
-    ) {
-
-      state.auth.error =
-        'Ten login jest już zajęty.';
-
     } else {
-
-      state.users.push({
-        login,
-        password,
-        email,
-        isAdmin: false
-      });
-
-      state.auth.loggedIn = true;
-
-      state.auth.user = {
-        login,
-        email,
-        isAdmin: false
-      };
-
-      state.auth.error = null;
-
-      const resume =
-        state.auth.resumeToPayment;
-
-      state.auth.view = null;
-      state.auth.resumeToPayment = false;
-
-      if (resume) {
-        goToPaymentFlow();
-      }
-
-      showToast(
-        'Konto zostało utworzone. Witaj, ' +
-        login +
-        '!'
-      );
-
-      return;
+      // Rejestracja obsługiwana w innym miejscu
     }
   }
 
   else if (action === 'logout') {
 
     try {
-      // Wywołanie skryptu PHP, który usunie sesję z bazy danych
       await fetch('PHP/login/logout.php', {
         method: 'POST',
         headers: {
@@ -667,27 +699,64 @@ document.getElementById('app').addEventListener('click', async (e) => {
   }
 
   else if (action === 'edit-profile') {
-
     state.editingProfile = true;
+    state.profileError = null;
+  }
+
+  else if (action === 'cancel-profile-edit') {
+    state.editingProfile = false;
+    state.profileError = null;
   }
 
   else if (action === 'save-profile') {
+    const nameInput = document.querySelector('[data-field="name"]');
+    const phoneInput = document.querySelector('[data-field="phone"]');
+    
+    const oldPasswordInput = document.getElementById('profileOldPassword');
+    const newPasswordInput = document.getElementById('profileNewPassword');
+    const confirmPasswordInput = document.getElementById('profileConfirmPassword');
 
-    document
-      .querySelectorAll('[data-field]')
-      .forEach(input => {
+    const name = nameInput ? nameInput.value.trim() : '';
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const oldPassword = oldPasswordInput ? oldPasswordInput.value : '';
+    const newPassword = newPasswordInput ? newPasswordInput.value : '';
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
 
-        state.profile[
-          input.dataset.field
-        ] = input.value;
+    if (newPassword && newPassword !== confirmPassword) {
+      state.profileError = 'Nowe hasła nie są identyczne.';
+      render();
+      return;
+    }
+
+    try {
+      const res = await fetch('PHP/profile/update_profile.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          oldPassword,
+          newPassword
+        })
       });
 
-    state.editingProfile = false;
+      const data = await res.json();
 
-    showToast(
-      'Zmiany w profilu zostały zapisane.'
-    );
+      if (data.success) {
+        state.profile.name = name;
+        state.profile.phone = phone;
+        state.editingProfile = false;
+        state.profileError = null;
+        showToast('Zmiany w profilu zostały zapisane.');
+      } else {
+        state.profileError = data.message || 'Wystąpił błąd podczas zapisu.';
+      }
+    } catch (err) {
+      console.error('[DEBUG] Błąd zapisu profilu:', err);
+      state.profileError = 'Błąd połączenia z serwerem.';
+    }
 
+    render();
     return;
   }
 
@@ -881,10 +950,6 @@ export function checkP24Status() {
 
 export async function handleRegister(e) {
 
-  console.log(
-    '[DEBUG] Start wysyłania rejestracji...'
-  );
-
   const container =
     e
       ? e.target.closest('.auth-card')
@@ -998,10 +1063,6 @@ export async function handleRegister(e) {
 
 export async function handleLogin(e) {
 
-  console.log(
-    "[DEBUG] Start wysyłania logowania..."
-  );
-
   const container =
     e
       ? e.target.closest('.auth-card')
@@ -1106,7 +1167,6 @@ export async function handleLogin(e) {
         return;
       }
 
-      // Zapis ciasteczka logowania z normalnym @
       const maxAgeStr = rememberMe ? "; max-age=" + (30 * 24 * 60 * 60) : "";
       document.cookie = "email=" + data.user.email + maxAgeStr + "; path=/;";
 
@@ -1163,6 +1223,5 @@ export async function handleLogin(e) {
     render();
   }
 }
-
 
 checkP24Status();

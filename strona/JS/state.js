@@ -48,29 +48,7 @@ const state = {
     courts: [],
     reservations: [],
 
-    transactions: [
-        {
-            id: 't1',
-            dateStr: toDateStr(addDays(new Date(), -11)),
-            desc: 'Rezerwacja — Kort 2, 18:00–19:00',
-            amount: 55,
-            status: 'done'
-        },
-        {
-            id: 't2',
-            dateStr: toDateStr(addDays(new Date(), -6)),
-            desc: 'Rezerwacja — Kort 4, 20:00–22:00',
-            amount: 160,
-            status: 'done'
-        },
-        {
-            id: 't3',
-            dateStr: toDateStr(addDays(new Date(), -3)),
-            desc: 'Rezerwacja — Kort 1, 09:00–10:00',
-            amount: 60,
-            status: 'cancelled'
-        }
-    ]
+    transactions: []
 };
 
 // Funkcja pobierająca korty i zapisująca je do stanu jako zwykłą tablicę
@@ -124,6 +102,31 @@ export async function fetchBookedHoursFromServer(courtId, dateStr) {
     } catch (e) {
         console.error("Nie udało się pobrać zajętych godzin", e);
         return [];
+    }
+}
+
+// Funkcja pobierająca wszystkie rezerwacje użytkownika do stanu (np. do historii)
+export async function fetchReservations(email) {
+    try {
+        const response = await fetch("PHP/db_getters/get_reservations.php", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+        });
+        const data = await response.json();
+        state.transactions = Array.isArray(data) ? data.map(r => ({
+            id: String(r.id),
+            codeID: r.codeID || r.codeid,
+            courtId: Number(r.court_id),
+            dateStr: r.date,
+            startHour: parseInt(r.begin || r.start_time),
+            endHour: parseInt(r.end || r.end_time),
+            price: r.price,
+            returnRequest: r.returnRequest || null
+        })) : [];
+    } catch (e) {
+        console.error("Nie udało się pobrać rezerwacji do stanu", e);
+        state.transactions = [];
     }
 }
 

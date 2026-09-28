@@ -10,13 +10,37 @@ import {
   nextFreeSlotLabel,
 } from "../../helpers.js";
 
+// Pomocnicza funkcja do wyciągania e-maila z ciasteczek
+function getEmailFromCookies() {
+  const cookies = document.cookie.split(';');
+  for (let cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (value && (name.toLowerCase().includes('email') || name.toLowerCase().includes('user') || value.includes('@'))) {
+      return decodeURIComponent(value);
+    }
+  }
+  return null;
+}
+
 export async function renderRezerwacje(email) {
+  // Pobieramy e-mail: z argumentu, ze stanu lub z ciasteczek
+  let userEmail = email || state.auth?.user?.email || state.auth?.email || getEmailFromCookies();
+
+  if (!userEmail) {
+    return `
+      <h2 class="section-title">Moje rezerwacje</h2>
+      <div class="empty-state">
+        Musisz się zalogować, aby zobaczyć swoje rezerwacje.
+      </div>
+    `;
+  }
+
   let responseData;
   try {
     const res = await fetch("PHP/db_getters/get_reservations.php", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email })
+      body: JSON.stringify({ email: userEmail })
     });
     responseData = await res.json();
   } catch (err) {
@@ -24,9 +48,24 @@ export async function renderRezerwacje(email) {
     responseData = [];
   }
 
-  const upcoming = Array.isArray(responseData) ? responseData : [];
+  const allReservations = Array.isArray(responseData) ? responseData : [];
+  console.log("Wszystkie rezerwacje z bazy dla e-maila " + userEmail + ":", allReservations);
 
-  // Zapisujemy pobrane rezerwacje do stanu
+  // Ustawiamy dzisiejszą północ do porównania
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Filtrujemy: zostawiamy tylko dzisiejsze i przyszłe rezerwacje
+  const upcoming = allReservations.filter(r => {
+    if (!r.date) return false;
+    const datePart = String(r.date).trim().split(' ')[0].split('T')[0];
+    const resDate = new Date(datePart);
+    resDate.setHours(0, 0, 0, 0);
+
+    return resDate.getTime() >= today.getTime();
+  });
+
+  // Zapisujemy przefiltrowane rezerwacje do stanu
   state.reservations = upcoming.map(r => ({
     id: String(r.id),
     codeID: r.codeID || r.codeid,
@@ -37,9 +76,8 @@ export async function renderRezerwacje(email) {
     price: r.price,
     returnRequest: r.returnRequest || null
   }));
-  console.log(state.reservations);
 
-  // BEZPIECZNE POBRANIE KORTÓW (obsługa, gdyby state.courts był promise lub tablicą)
+  // BEZPIECZNE POBRANIE KORTÓW
   let courtsArray = [];
   try {
     const resolvedCourts = await state.courts;
@@ -52,7 +90,6 @@ export async function renderRezerwacje(email) {
     const date = r.date ? new Date(r.date) : new Date();
     const court = courtsArray.find(c => Number(c.id) === Number(r.court_id)) || { name: 'Kort', surfaceLabel: '' };
     
-    // Konwertujemy bezpiecznie na string, żeby .substring() nigdy nie wyrzucił błędu
     const rawStart = r.begin ?? r.start_time ?? '00:00:00';
     const rawEnd = r.end ?? r.end_time ?? '00:00:00';
     
@@ -85,7 +122,7 @@ export async function renderRezerwacje(email) {
     <p class="section-sub">Nadchodzące rezerwacje kortów.</p>
     ${upcoming.length ? list : `
       <div class="empty-state">
-        Nie masz jeszcze żadnych rezerwacji.
+        Nie masz jeszcze żadnych nadchodzących rezerwacji.
         <div><button class="go-btn" data-action="set-tab" data-tab="korty">Przeglądaj korty</button></div>
       </div>
     `}

@@ -1,4 +1,5 @@
 <?php
+require("config.php");
 header('Content-Type: application/json; charset=utf-8');
 
 // --- 1. POŁĄCZENIE Z BAZĄ DANYCH ---
@@ -93,13 +94,19 @@ try {
     $stmtRes = $pdo->prepare("INSERT INTO reservations (court_ID, client_ID, codeID) VALUES (?, ?, ?)");
     $stmtRes->execute([$courtId, $userId, $codeID]);
     $reservationId = $pdo->lastInsertId();
-
+    
     // B. Pozycje rezerwacji
     $stmtItem = $pdo->prepare("
         INSERT INTO reservation_items (reservation_id, court_id, reservation_date, start_time, end_time, price) 
         VALUES (?, ?, ?, ?, ?, ?)
     ");
     $stmtItem->execute([$reservationId, $courtId, $dateStr, $startHourInt, $endHourInt, $amount]);
+    // $history = $pdo->prepare("
+    //     INSERT INTO reservations_history (ID, court_ID, client_ID, begin_date, end_date, code, price) 
+    //     VALUES (?, ?, ?, ?, ?, ?)
+    // ");
+    // $history->execute([$reservationId, $courtId, $userId, $startHourInt, $endHourInt, $codeID, $amount])
+    
 
     // C. Płatność
     $stmtPay = $pdo->prepare("

@@ -1,4 +1,6 @@
 <?php
+// Wymuszenie czystego buforowania, aby uniknąć błędów JSON
+ob_start();
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -15,6 +17,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 if (!$config) {
+    ob_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -31,14 +34,26 @@ if (!is_array($data)) {
 
 $email = trim($data['email'] ?? '');
 $password = $data['password'] ?? '';
+$rememberMe = !empty($data['rememberMe']); 
 
 if ($email === '' || $password === '') {
+    ob_clean();
     http_response_code(400);
     echo json_encode([
         'success' => false,
         'message' => 'Podaj email i hasło.'
     ]);
     exit;
+}
+
+// Konfiguracja czasu życia sesji PHP (30 dni jeśli zaznaczono "Zapamiętaj mnie")
+$lifetime = $rememberMe ? (30 * 24 * 60 * 60) : 0;
+ini_set('session.cookie_lifetime', $lifetime);
+ini_set('session.gc_maxlifetime', $lifetime);
+session_set_cookie_params($lifetime, '/');
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
 $stmt = mysqli_prepare(
@@ -50,6 +65,7 @@ $stmt = mysqli_prepare(
 );
 
 if (!$stmt) {
+    ob_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -62,6 +78,7 @@ mysqli_stmt_bind_param($stmt, "s", $email);
 
 if (!mysqli_stmt_execute($stmt)) {
     mysqli_stmt_close($stmt);
+    ob_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -82,6 +99,7 @@ mysqli_stmt_bind_result(
 
 if (!mysqli_stmt_fetch($stmt)) {
     mysqli_stmt_close($stmt);
+    ob_clean();
     echo json_encode([
         'success' => false,
         'message' => 'Nieprawidłowy email lub hasło.'
@@ -92,14 +110,13 @@ if (!mysqli_stmt_fetch($stmt)) {
 mysqli_stmt_close($stmt);
 
 if (!password_verify($password, $userPassword)) {
+    ob_clean();
     echo json_encode([
         'success' => false,
         'message' => 'Nieprawidłowy email lub hasło.'
     ]);
     exit;
 }
-
-session_start();
 
 // Jeśli 2FA jest włączone dla tego konta
 if ((int)$twoFactorEnabled === 1) {
@@ -156,6 +173,7 @@ if ((int)$twoFactorEnabled === 1) {
         // Obsługa błędu wysyłki
     }
 
+    ob_clean();
     echo json_encode([
         'success' => true,
         'requires_2fa' => true,
@@ -173,6 +191,7 @@ $stmt = mysqli_prepare(
     "INSERT INTO users_sessions (user_id, session) VALUES (?, ?)"
 );
 if (!$stmt) {
+    ob_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -184,6 +203,7 @@ mysqli_stmt_bind_param($stmt, "is", $userId, $sessionId);
 mysqli_stmt_execute($stmt);
 mysqli_stmt_close($stmt);
 
+ob_clean();
 echo json_encode([
     'success' => true,
     'requires_2fa' => false,
