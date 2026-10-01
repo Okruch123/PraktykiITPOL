@@ -72,7 +72,6 @@ function isHourFree(courtId, dateIndex, hour){
     if(myReservationAt(courtId, dateIndex, hour))
         return false;
 
-    // Sprawdzamy, czy godzina jest w tablicy pobranej z bazy danych przez PHP
     if(state.bookedHours && state.bookedHours.includes(hour))
         return false;
 
@@ -112,7 +111,7 @@ async function checkAuth(sessionID, email){
           })
         });
         const data = await res.json();
-        return data; // Zwracamy wynik do startup.js!
+        return data;
     } catch (e) {
         console.error("Błąd checkAuth:", e);
         return { success: false };

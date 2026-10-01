@@ -1,12 +1,11 @@
 import {state} from "../../state.js";
 
 export function renderAuthOverlay(){
-  const mode = state.auth.view; // może być 'login', 'register', 'forgot', 'reset-code'
+  const mode = state.auth.view;
   const err = state.auth.error;
   const requires2FA = state.auth.requires2FA;
   const isLoading = state.auth.loading;
 
-  // Nagłówki i opisy w zależności od trybu
   let title = 'Zaloguj się';
   let subtitle = state.auth.resumeToPayment ? 'Zaloguj się lub załóż konto, aby dokończyć rezerwację.' : 'Dostęp do rezerwacji kortów SETPOINT.';
 

@@ -1,8 +1,2 @@
-[2026-09-21 09:58:14] --- START 2FA ---
-[2026-09-21 09:58:14] Session ID | Data: "fjn4oacike..."
-[2026-09-21 09:58:14] Action | Data: "send"
-[2026-09-21 09:58:16] Kod wysłany | Data: {"user_id":8,"action":"disable","email":"czubaksebastian21@gmail.com"}
-[2026-09-21 09:58:23] --- START 2FA ---
-[2026-09-21 09:58:23] Session ID | Data: "fjn4oacike..."
-[2026-09-21 09:58:23] Action | Data: "confirm"
-[2026-09-21 09:58:23] 2FA zmienione | Data: {"user_id":8,"new_value":0}
+[2026-10-01 11:44:18] Kod 2FA wysłany. | Data: {"user_id":9,"action":"enable"}
+[2026-10-01 11:44:45] Ustawienie 2FA zmienione. | Data: {"user_id":9,"new_value":1}

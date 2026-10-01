@@ -6,7 +6,6 @@ import { render } from "../render.js";
 window.handlePayP24 = async function handlePayP24() {
   const pb = state.pendingPayment;
 
-  // --- DEBUGOWANIE W KONSOLI PRZEGLĄDARKI ---
   console.log("=== DEBUG PŁATNOŚCI (state.pendingPayment) ===", pb);
 
   if (!pb || !pb.price) {

@@ -1,99 +1,116 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL);
+    header('Content-Type: application/json; charset=utf-8');
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+    error_reporting(E_ALL);
 
-session_start();
+    session_start();
 
-require_once(__DIR__ . '/../db_getters/config.php');
+    require_once(__DIR__ . '/../db_getters/config.php');
 
-if (!$config) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Błąd połączenia z bazą.']);
-    exit;
-}
+    if (!($pdo instanceof PDO)) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Błąd połączenia z bazą.']);
+        exit;
+    }
 
-if (!isset($_SESSION['pending_2fa_user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Brak aktywnej sesji weryfikacji 2FA. Zaloguj się ponownie.']);
-    exit;
-}
+    if (!isset($_SESSION['pending_2fa_user_id'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Brak aktywnej sesji weryfikacji 2FA. Zaloguj się ponownie.'
+        ]);
+        exit;
+    }
 
-$userId = (int)$_SESSION['pending_2fa_user_id'];
+    $userId = (int)$_SESSION['pending_2fa_user_id'];
 
-$rawInput = file_get_contents('php://input');
-$data = json_decode($rawInput, true);
-if (!is_array($data)) {
-    $data = $_POST;
-}
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true);
 
-$code = trim($data['code'] ?? '');
+    if (!is_array($data)) {
+        $data = $_POST;
+    }
 
-if (!preg_match('/^\d{6}$/', $code)) {
-    echo json_encode(['success' => false, 'message' => 'Nieprawidłowy format kodu.']);
-    exit;
-}
+    $code = trim($data['code'] ?? '');
 
-$stmtCode = mysqli_prepare(
-    $config,
-    "SELECT id, expires_at FROM two_factor_codes WHERE user_id = ? AND code = ? AND used = 0 LIMIT 1"
-);
-mysqli_stmt_bind_param($stmtCode, 'is', $userId, $code);
-mysqli_stmt_execute($stmtCode);
-$resultCode = mysqli_stmt_get_result($stmtCode);
-$codeRow = mysqli_fetch_assoc($resultCode);
-mysqli_stmt_close($stmtCode);
+    if (!preg_match('/^\d{6}$/', $code)) {
+        echo json_encode(['success' => false, 'message' => 'Nieprawidłowy format kodu.']);
+        exit;
+    }
 
-if (!$codeRow) {
-    echo json_encode(['success' => false, 'message' => 'Nieprawidłowy kod weryfikacyjny.']);
-    exit;
-}
+    try {
+        $stmtCode = $pdo->prepare(
+            'SELECT id, expires_at
+            FROM two_factor_codes
+            WHERE user_id = ? AND code = ? AND used = 0
+            LIMIT 1'
+        );
+        $stmtCode->execute([$userId, $code]);
+        $codeRow = $stmtCode->fetch(PDO::FETCH_ASSOC);
 
-if (strtotime($codeRow['expires_at']) < time()) {
-    $stmtDel = mysqli_prepare($config, "DELETE FROM two_factor_codes WHERE id = ?");
-    mysqli_stmt_bind_param($stmtDel, 'i', $codeRow['id']);
-    mysqli_stmt_execute($stmtDel);
-    mysqli_stmt_close($stmtDel);
+        if (!$codeRow) {
+            echo json_encode(['success' => false, 'message' => 'Nieprawidłowy kod weryfikacyjny.']);
+            exit;
+        }
 
-    echo json_encode(['success' => false, 'message' => 'Kod wygasł. Zaloguj się ponownie.']);
-    exit;
-}
+        if (strtotime($codeRow['expires_at']) < time()) {
+            $stmtDelete = $pdo->prepare(
+                'DELETE FROM two_factor_codes WHERE id = ?'
+            );
+            $stmtDelete->execute([$codeRow['id']]);
 
-// Oznacz kod jako zużyty
-$stmtUsed = mysqli_prepare($config, "UPDATE two_factor_codes SET used = 1 WHERE id = ?");
-mysqli_stmt_bind_param($stmtUsed, 'i', $codeRow['id']);
-mysqli_stmt_execute($stmtUsed);
-mysqli_stmt_close($stmtUsed);
+            echo json_encode(['success' => false, 'message' => 'Kod wygasł. Zaloguj się ponownie.']);
+            exit;
+        }
 
-// Pobierz dane użytkownika
-$stmtUser = mysqli_prepare($config, "SELECT id, email, is_admin FROM users WHERE id = ? LIMIT 1");
-mysqli_stmt_bind_param($stmtUser, 'i', $userId);
-mysqli_stmt_execute($stmtUser);
-$resUser = mysqli_stmt_get_result($stmtUser);
-$user = mysqli_fetch_assoc($resUser);
-mysqli_stmt_close($stmtUser);
+        $stmtUsed = $pdo->prepare(
+            'UPDATE two_factor_codes SET used = 1 WHERE id = ? AND used = 0'
+        );
+        $stmtUsed->execute([$codeRow['id']]);
 
-if (!$user) {
-    echo json_encode(['success' => false, 'message' => 'Nie znaleziono użytkownika.']);
-    exit;
-}
+        if ($stmtUsed->rowCount() !== 1) {
+            echo json_encode(['success' => false, 'message' => 'Kod został już wykorzystany.']);
+            exit;
+        }
 
-// Utworzenie właściwej sesji po udanym 2FA
-unset($_SESSION['pending_2fa_user_id']);
-session_regenerate_id(true);
-$sessionId = session_id();
+        $stmtUser = $pdo->prepare(
+            'SELECT id, email, is_admin
+            FROM users
+            WHERE id = ?
+            LIMIT 1'
+        );
+        $stmtUser->execute([$userId]);
+        $user = $stmtUser->fetch(PDO::FETCH_ASSOC);
 
-$stmtSession = mysqli_prepare($config, "INSERT INTO users_sessions (user_id, session) VALUES (?, ?)");
-mysqli_stmt_bind_param($stmtSession, 'is', $userId, $sessionId);
-mysqli_stmt_execute($stmtSession);
-mysqli_stmt_close($stmtSession);
+        if (!$user) {
+            echo json_encode(['success' => false, 'message' => 'Nie znaleziono użytkownika.']);
+            exit;
+        }
 
-echo json_encode([
-    'success' => true,
-    'message' => 'Zalogowano pomyślnie.',
-    'user' => [
-        'id' => (int)$user['id'],
-        'email' => $user['email'],
-        'is_admin' => $user['is_admin']
-    ]
-]);
+        unset($_SESSION['pending_2fa_user_id']);
+        session_regenerate_id(true);
+        $sessionId = session_id();
+
+        $stmtSession = $pdo->prepare(
+            'INSERT INTO users_sessions (user_id, session) VALUES (?, ?)'
+        );
+        $stmtSession->execute([$userId, $sessionId]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Zalogowano pomyślnie.',
+            'user' => [
+                'id' => (int)$user['id'],
+                'email' => $user['email'],
+                'is_admin' => $user['is_admin']
+            ]
+        ]);
+    } catch (PDOException $e) {
+        error_log($e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Błąd zapytania do bazy danych.'
+        ]);
+    }
+?>

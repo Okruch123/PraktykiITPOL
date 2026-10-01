@@ -638,7 +638,6 @@ document.getElementById('app').addEventListener('click', async (e) => {
         'Hasła nie są identyczne.';
 
     } else {
-      // Rejestracja obsługiwana w innym miejscu
     }
   }
 

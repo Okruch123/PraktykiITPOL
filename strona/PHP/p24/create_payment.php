@@ -1,24 +1,8 @@
 <?php
-require("config.php");
+require_once(__DIR__ . '/../db_getters/config.php');
+
 header('Content-Type: application/json; charset=utf-8');
 
-// --- 1. POŁĄCZENIE Z BAZĄ DANYCH ---
-$dbHost = 'localhost';
-$dbName = 'praktyki_itpol';
-$dbUser = 'root';
-$dbPass = '';                
-
-try {
-    $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4", $dbUser, $dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-    ]);
-} catch (PDOException $e) {
-    echo json_encode(['error' => 'Błąd połączenia z bazą: ' . $e->getMessage()]);
-    exit;
-}
-
-// --- 2. ODBIÓR DANYCH Z FRONTENDU ---
 $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true);
 
@@ -41,7 +25,6 @@ if ($amount <= 0) {
     exit;
 }
 
-// Pobranie ID użytkownika na podstawie e-maila, jeśli brak ID
 if ($userId <= 0 && !empty($email)) {
     $stmtUser = $pdo->prepare("SELECT ID FROM users WHERE email = ?");
     $stmtUser->execute([$email]);
@@ -68,11 +51,9 @@ $endHourInt   = (int)$endHour;
 $codeID = 'SET-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
 $sessionId = 'p24_' . time() . '_' . rand(100, 999);
 
-// --- 3. ZAPIS DO BAZY DANYCH (Z BLOKADĄ NAKŁADANIA SIĘ TERMINÓW) ---
 try {
     $pdo->beginTransaction();
 
-    // Sprawdzenie, czy w podanym przedziale czasowym istnieje już rezerwacja (status pending lub paid)
     $checkStmt = $pdo->prepare("
         SELECT ri.id FROM reservation_items ri
         JOIN reservations r ON ri.reservation_id = r.ID
@@ -90,25 +71,16 @@ try {
         exit;
     }
 
-    // A. Nagłówek rezerwacji
     $stmtRes = $pdo->prepare("INSERT INTO reservations (court_ID, client_ID, codeID) VALUES (?, ?, ?)");
     $stmtRes->execute([$courtId, $userId, $codeID]);
     $reservationId = $pdo->lastInsertId();
     
-    // B. Pozycje rezerwacji
     $stmtItem = $pdo->prepare("
         INSERT INTO reservation_items (reservation_id, court_id, reservation_date, start_time, end_time, price) 
         VALUES (?, ?, ?, ?, ?, ?)
     ");
     $stmtItem->execute([$reservationId, $courtId, $dateStr, $startHourInt, $endHourInt, $amount]);
-    // $history = $pdo->prepare("
-    //     INSERT INTO reservations_history (ID, court_ID, client_ID, begin_date, end_date, code, price) 
-    //     VALUES (?, ?, ?, ?, ?, ?)
-    // ");
-    // $history->execute([$reservationId, $courtId, $userId, $startHourInt, $endHourInt, $codeID, $amount])
-    
 
-    // C. Płatność
     $stmtPay = $pdo->prepare("
         INSERT INTO payments (reservation_id, user_id, amount, currency, provider, status) 
         VALUES (?, ?, ?, 'PLN', 'przelewy24', 'pending')
@@ -116,7 +88,6 @@ try {
     $stmtPay->execute([$reservationId, $userId, $amount]);
     $paymentId = $pdo->lastInsertId();
 
-    // D. Transakcja płatności
     $stmtTrans = $pdo->prepare("
         INSERT INTO payment_transactions (payment_id, session_id, status, amount) 
         VALUES (?, ?, 'pending', ?)
@@ -131,7 +102,6 @@ try {
     exit;
 }
 
-// --- 4. ODPOWIEDŹ Z URL POWROTU ---
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
 $returnUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . '/PraktykiITPOL/strona/?status=success&code=' . $codeID;
 

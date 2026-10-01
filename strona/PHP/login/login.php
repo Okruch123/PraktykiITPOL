@@ -1,11 +1,9 @@
 <?php
-// Wymuszenie czystego buforowania, aby uniknąć błędów JSON
 ob_start();
 
 header('Content-Type: application/json; charset=utf-8');
-
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
 error_reporting(E_ALL);
 
 require_once(__DIR__ . '/../db_getters/config.php');
@@ -14,203 +12,180 @@ require_once(__DIR__ . '/../../../PHPMailer-master/src/PHPMailer.php');
 require_once(__DIR__ . '/../../../PHPMailer-master/src/SMTP.php');
 
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
-if (!$config) {
-    ob_clean();
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Błąd połączenia z bazą.'
-    ]);
+function respondJson(array $response, int $status = 200): void
+{
+    if (ob_get_level() > 0) {
+        ob_clean();
+    }
+
+    http_response_code($status);
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+if (!isset($pdo) || !($pdo instanceof PDO)) {
+    error_log('login.php: brak poprawnego połączenia PDO.');
+    respondJson(['success' => false, 'message' => 'Błąd połączenia z bazą.'], 500);
 }
 
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true);
+
 if (!is_array($data)) {
     $data = $_POST;
 }
 
 $email = trim($data['email'] ?? '');
 $password = $data['password'] ?? '';
-$rememberMe = !empty($data['rememberMe']); 
 
 if ($email === '' || $password === '') {
-    ob_clean();
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Podaj email i hasło.'
-    ]);
-    exit;
+    respondJson(['success' => false, 'message' => 'Podaj email i hasło.'], 400);
 }
 
-// Konfiguracja czasu życia sesji PHP (30 dni jeśli zaznaczono "Zapamiętaj mnie")
-$lifetime = $rememberMe ? (30 * 24 * 60 * 60) : 0;
-ini_set('session.cookie_lifetime', $lifetime);
-ini_set('session.gc_maxlifetime', $lifetime);
-session_set_cookie_params($lifetime, '/');
+try {
+    $stmt = $pdo->prepare(
+        'SELECT id, email, first_name, password_hash, is_admin, twoFactorEnabled
+         FROM users
+         WHERE email = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log('login.php — błąd zapytania: ' . $e->getMessage());
+    respondJson(['success' => false, 'message' => 'Błąd bazy danych.'], 500);
+}
 
-if (session_status() === PHP_SESSION_NONE) {
+if (!$user || !password_verify($password, $user['password_hash'])) {
+    respondJson(['success' => false, 'message' => 'Nieprawidłowy email lub hasło.'], 401);
+}
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
+session_regenerate_id(true);
 
-$stmt = mysqli_prepare(
-    $config,
-    "SELECT id, email, first_name, password_hash, is_admin, twoFactorEnabled
-     FROM users
-     WHERE email = ?
-     LIMIT 1"
-);
+$userId = (int)$user['id'];
 
-if (!$stmt) {
-    ob_clean();
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Błąd przygotowania zapytania.'
-    ]);
-    exit;
-}
-
-mysqli_stmt_bind_param($stmt, "s", $email);
-
-if (!mysqli_stmt_execute($stmt)) {
-    mysqli_stmt_close($stmt);
-    ob_clean();
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Błąd wykonania zapytania.'
-    ]);
-    exit;
-}
-
-mysqli_stmt_bind_result(
-    $stmt,
-    $userId,
-    $userEmail,
-    $userFirstName,
-    $userPassword,
-    $user_is_admin,
-    $twoFactorEnabled
-);
-
-if (!mysqli_stmt_fetch($stmt)) {
-    mysqli_stmt_close($stmt);
-    ob_clean();
-    echo json_encode([
-        'success' => false,
-        'message' => 'Nieprawidłowy email lub hasło.'
-    ]);
-    exit;
-}
-
-mysqli_stmt_close($stmt);
-
-if (!password_verify($password, $userPassword)) {
-    ob_clean();
-    echo json_encode([
-        'success' => false,
-        'message' => 'Nieprawidłowy email lub hasło.'
-    ]);
-    exit;
-}
-
-// Jeśli 2FA jest włączone dla tego konta
-if ((int)$twoFactorEnabled === 1) {
+if ((int)$user['twoFactorEnabled'] === 1) {
     $_SESSION['pending_2fa_user_id'] = $userId;
 
-    // Usuń stare kody użytkownika
-    $stmtDelete = mysqli_prepare(
-        $config,
-        "DELETE FROM two_factor_codes WHERE user_id = ?"
-    );
-    mysqli_stmt_bind_param($stmtDelete, 'i', $userId);
-    mysqli_stmt_execute($stmtDelete);
-    mysqli_stmt_close($stmtDelete);
-
-    // Wygeneruj 6-cyfrowy kod
     $code = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     $expiresAt = date('Y-m-d H:i:s', time() + 600);
 
-    // Zapisz kod w bazie
-    $stmtCode = mysqli_prepare(
-        $config,
-        "INSERT INTO two_factor_codes (user_id, code, action, expires_at) VALUES (?, ?, 'enable', ?)"
-    );
-    mysqli_stmt_bind_param($stmtCode, 'iss', $userId, $code, $expiresAt);
-    mysqli_stmt_execute($stmtCode);
-    mysqli_stmt_close($stmtCode);
-
-    // Wyślij e-mail przez PHPMailer
-    $mail = new PHPMailer(true);
     try {
+        $pdo->beginTransaction();
+
+        $stmtDelete = $pdo->prepare(
+            'DELETE FROM two_factor_codes WHERE user_id = ?'
+        );
+        $stmtDelete->execute([$userId]);
+
+        $stmtCode = $pdo->prepare(
+            "INSERT INTO two_factor_codes (user_id, code, action, expires_at)
+             VALUES (?, ?, 'enable', ?)"
+        );
+        $stmtCode->execute([$userId, $code, $expiresAt]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        error_log('login.php — błąd zapisu kodu 2FA: ' . $e->getMessage());
+        respondJson(['success' => false, 'message' => 'Nie udało się przygotować weryfikacji.'], 500);
+    }
+
+    try {
+        $smtpHost   = $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+        $smtpPort   = (int)($_ENV['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: 587);
+        $smtpSecure = strtolower($_ENV['SMTP_SECURE'] ?? getenv('SMTP_SECURE') ?: 'tls');
+        $smtpUser   = $_ENV['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME');
+        $smtpPass   = $_ENV['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD');
+        $fromName   = $_ENV['SMTP_FROM_NAME'] ?? getenv('SMTP_FROM_NAME') ?: 'SETPOINT Rezerwacje';
+
+        if (!$smtpUser || !$smtpPass) {
+            throw new RuntimeException('Brak konfiguracji SMTP.');
+        }
+
+        $mail = new PHPMailer(true);
         $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
+        $mail->Host = $smtpHost;
         $mail->SMTPAuth = true;
-        $mail->Username = 'oskarjablonski069@gmail.com';
-        $mail->Password = 'zlwd ypeb bfnq ycsv';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
+        $mail->Username = $smtpUser;
+        $mail->Password = $smtpPass;
+
+        if ($smtpSecure === 'ssl') {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        } elseif ($smtpSecure === 'tls' || $smtpSecure === 'starttls') {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        } else {
+            $mail->SMTPSecure = '';
+            $mail->SMTPAutoTLS = false;
+        }
+
+        $mail->Port = $smtpPort;
         $mail->CharSet = 'UTF-8';
 
-        $mail->setFrom('oskarjablonski069@gmail.com', 'SETPOINT Rezerwacje');
-        $mail->addAddress($userEmail, $userFirstName ?? '');
+        $mail->setFrom($smtpUser, $fromName);
+        $mail->addAddress($user['email'], $user['first_name'] ?? '');
         $mail->isHTML(true);
         $mail->Subject = 'Kod weryfikacyjny logowania - SETPOINT';
+
+        $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
         $mail->Body = '
             <h2>Weryfikacja dwuetapowa logowania</h2>
             <p>Twój kod weryfikacyjny:</p>
-            <h1 style="letter-spacing: 8px;">' . htmlspecialchars($code) . '</h1>
+            <h1 style="letter-spacing: 8px;">' . $safeCode . '</h1>
             <p>Kod jest ważny przez 10 minut.</p>
-            <p>Jeżeli to nie Ty próbujesz się zalogować, zignoruj tę wiadomość.</p>
         ';
-        $mail->AltBody = 'Twój kod weryfikacyjny SETPOINT: ' . $code . '. Kod jest ważny przez 10 minut.';
+        $mail->AltBody = 'Twój kod weryfikacyjny SETPOINT: '
+            . $code . '. Kod jest ważny przez 10 minut.';
+
         $mail->send();
-    } catch (Exception $e) {
-        // Obsługa błędu wysyłki
+    } catch (Throwable $e) {
+        error_log('========== SMTP ERROR ==========');
+        error_log('Typ: ' . get_class($e));
+        error_log('Błąd: ' . $e->getMessage());
+        error_log('Plik: ' . $e->getFile());
+        error_log('Linia: ' . $e->getLine());
+        error_log('================================');
+
+        respondJson([
+            'success' => false,
+            'message' => 'Błąd SMTP: ' . $e->getMessage()
+        ], 500);
     }
 
-    ob_clean();
-    echo json_encode([
+    respondJson([
         'success' => true,
         'requires_2fa' => true,
-        'message' => 'Wymagana weryfikacja dwuetapowa. Wprowadź kod wysłany na e-mail.'
+        'message' => 'Kod weryfikacyjny został wysłany na e-mail.'
     ]);
-    exit;
 }
 
-// Standardowe logowanie (gdy 2FA jest wyłączone)
-session_regenerate_id(true);
-$sessionId = session_id();
+try {
+    $sessionId = session_id();
 
-$stmt = mysqli_prepare(
-    $config,
-    "INSERT INTO users_sessions (user_id, session) VALUES (?, ?)"
-);
-if (!$stmt) {
-    ob_clean();
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Nie udało się utworzyć sesji.'
-    ]);
-    exit;
+    $stmtSession = $pdo->prepare(
+        'INSERT INTO users_sessions (user_id, session) VALUES (?, ?)'
+    );
+    $stmtSession->execute([$userId, $sessionId]);
+} catch (PDOException $e) {
+    error_log('login.php — błąd zapisu sesji: ' . $e->getMessage());
+    respondJson(['success' => false, 'message' => 'Nie udało się utworzyć sesji.'], 500);
 }
-mysqli_stmt_bind_param($stmt, "is", $userId, $sessionId);
-mysqli_stmt_execute($stmt);
-mysqli_stmt_close($stmt);
 
-ob_clean();
-echo json_encode([
+respondJson([
     'success' => true,
     'requires_2fa' => false,
     'message' => 'Zalogowano pomyślnie.',
     'user' => [
-        'id' => (int)$userId,
-        'email' => $userEmail,
-        'is_admin' => $user_is_admin
+        'id' => $userId,
+        'email' => $user['email'],
+        'is_admin' => $user['is_admin']
     ]
 ]);
+?>

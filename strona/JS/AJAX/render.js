@@ -32,18 +32,16 @@ export async function render(){
         body = await renderKorty();
     }
     else if(state.tab === 'konto'){
-        body = renderKonto();
+        body = await renderKonto();
     }
     else if(state.tab === 'obsluga'){
-        body = renderObsluga();
+        body = await renderObsluga();
     }
     else{
         var email = getCookie('email');
-        console.log(state.viewingReservationId);
         body = state.viewingReservationId
             ? await renderReservationDetail(state.viewingReservationId)
             : await renderRezerwacje(email);
-
     }
 
     document.getElementById('app').innerHTML = `

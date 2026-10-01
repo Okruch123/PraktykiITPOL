@@ -1,76 +1,88 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
+    header('Content-Type: application/json; charset=utf-8');
 
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL);
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+    error_reporting(E_ALL);
 
-require_once(__DIR__ . '/../db_getters/config.php');
+    require_once(__DIR__ . '/../db_getters/config.php');
 
-if (!$config) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Błąd połączenia z bazą.']);
-    exit;
-}
+    if (!($pdo instanceof PDO)) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Błąd połączenia z bazą.']);
+        exit;
+    }
 
-$rawInput = file_get_contents('php://input');
-$data = json_decode($rawInput, true);
-if (!is_array($data)) {
-    $data = $_POST;
-}
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true);
 
-$email = trim($data['email'] ?? '');
-$code = trim($data['code'] ?? '');
-$password = $data['password'] ?? '';
+    if (!is_array($data)) {
+        $data = $_POST;
+    }
 
-if ($email === '' || $code === '' || $password === '') {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Wypełnij wszystkie pola.']);
-    exit;
-}
+    $email = trim($data['email'] ?? '');
+    $code = trim($data['code'] ?? '');
+    $password = $data['password'] ?? '';
 
-// Pobierz id użytkownika
-$stmt = mysqli_prepare($config, "SELECT id FROM users WHERE email = ? LIMIT 1");
-mysqli_stmt_bind_param($stmt, "s", $email);
-mysqli_stmt_execute($stmt);
-mysqli_stmt_bind_result($stmt, $userId);
-$exists = mysqli_stmt_fetch($stmt);
-mysqli_stmt_close($stmt);
+    if ($email === '' || $code === '' || $password === '') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Wypełnij wszystkie pola.']);
+        exit;
+    }
 
-if (!$exists) {
-    echo json_encode(['success' => false, 'message' => 'Nie znaleziono użytkownika.']);
-    exit;
-}
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT id FROM users WHERE email = ? LIMIT 1'
+        );
+        $stmt->execute([$email]);
+        $userId = $stmt->fetchColumn();
 
-// Sprawdź poprawność kodu w tabeli two_factor_codes
-$stmtCode = mysqli_prepare($config, "SELECT id, expires_at FROM two_factor_codes WHERE user_id = ? AND code = ? AND action = 'reset' LIMIT 1");
-mysqli_stmt_bind_param($stmtCode, "is", $userId, $code);
-mysqli_stmt_execute($stmtCode);
-mysqli_stmt_bind_result($stmtCode, $codeId, $expiresAt);
-$validCode = mysqli_stmt_fetch($stmtCode);
-mysqli_stmt_close($stmtCode);
+        if ($userId === false) {
+            echo json_encode(['success' => false, 'message' => 'Nie znaleziono użytkownika.']);
+            exit;
+        }
 
-if (!$validCode) {
-    echo json_encode(['success' => false, 'message' => 'Nieprawidłowy kod weryfikacyjny.']);
-    exit;
-}
+        $stmtCode = $pdo->prepare(
+            "SELECT id, expires_at
+            FROM two_factor_codes
+            WHERE user_id = ? AND code = ? AND action = 'reset'
+            LIMIT 1"
+        );
+        $stmtCode->execute([$userId, $code]);
+        $codeData = $stmtCode->fetch(PDO::FETCH_ASSOC);
 
-if (strtotime($expiresAt) < time()) {
-    echo json_encode(['success' => false, 'message' => 'Kod wygasł. Wyślij nowy kod.']);
-    exit;
-}
+        if (!$codeData) {
+            echo json_encode(['success' => false, 'message' => 'Nieprawidłowy kod weryfikacyjny.']);
+            exit;
+        }
 
-// Zaktualizuj hasło
-$newPasswordHash = password_hash($password, PASSWORD_DEFAULT);
-$stmtUpdate = mysqli_prepare($config, "UPDATE users SET password_hash = ? WHERE id = ?");
-mysqli_stmt_bind_param($stmtUpdate, "si", $newPasswordHash, $userId);
-mysqli_stmt_execute($stmtUpdate);
-mysqli_stmt_close($stmtUpdate);
+        if (strtotime($codeData['expires_at']) < time()) {
+            echo json_encode(['success' => false, 'message' => 'Kod wygasł. Wyślij nowy kod.']);
+            exit;
+        }
 
-// Usuń użyty kod
-$stmtDel = mysqli_prepare($config, "DELETE FROM two_factor_codes WHERE id = ?");
-mysqli_stmt_bind_param($stmtDel, "i", $codeId);
-mysqli_stmt_execute($stmtDel);
-mysqli_stmt_close($stmtDel);
+        $newPasswordHash = password_hash($password, PASSWORD_DEFAULT);
 
-echo json_encode(['success' => true, 'message' => 'Hasło zostało pomyślnie zmienione.']);
+        $stmtUpdate = $pdo->prepare(
+            'UPDATE users SET password_hash = ? WHERE id = ?'
+        );
+        $stmtUpdate->execute([$newPasswordHash, $userId]);
+
+        $stmtDelete = $pdo->prepare(
+            'DELETE FROM two_factor_codes WHERE id = ?'
+        );
+        $stmtDelete->execute([$codeData['id']]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Hasło zostało pomyślnie zmienione.'
+        ]);
+    } catch (PDOException $e) {
+        error_log($e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Błąd zapytania do bazy danych.'
+        ]);
+    }
+?>

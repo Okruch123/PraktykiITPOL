@@ -1,4 +1,4 @@
-import { state, HOURS, BANKS, isOccupiedByOthers } from "../../../state.js";
+import { state, HOURS, BANKS, isOccupiedByOthers, fetchReservations } from "../../../state.js";
 import { DAY_NAMES, MONTH_NAMES, pad, toDateStr, addDays, TODAY, NOW_HOUR, DATES } from "../../../utils.js";
 import {
   fmtDate,
@@ -10,7 +10,6 @@ import {
   nextFreeSlotLabel,
 } from "../../helpers.js";
 
-// Pomocnicza funkcja do wyciągania e-maila z ciasteczek
 function getEmailFromCookies() {
   const cookies = document.cookie.split(';');
   for (let cookie of cookies) {
@@ -23,7 +22,6 @@ function getEmailFromCookies() {
 }
 
 export async function renderRezerwacje(email) {
-  // Pobieramy e-mail: z argumentu, ze stanu lub z ciasteczek
   let userEmail = email || state.auth?.user?.email || state.auth?.email || getEmailFromCookies();
 
   if (!userEmail) {
@@ -35,49 +33,34 @@ export async function renderRezerwacje(email) {
     `;
   }
 
-  let responseData;
-  try {
-    const res = await fetch("PHP/db_getters/get_reservations.php", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: userEmail })
-    });
-    responseData = await res.json();
-  } catch (err) {
-    console.error("Błąd pobierania rezerwacji:", err);
-    responseData = [];
+  if (!state.transactions || state.transactions.length === 0) {
+    await fetchReservations(userEmail);
   }
 
-  const allReservations = Array.isArray(responseData) ? responseData : [];
-  console.log("Wszystkie rezerwacje z bazy dla e-maila " + userEmail + ":", allReservations);
+  const now = new Date();
 
-  // Ustawiamy dzisiejszą północ do porównania
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const upcoming = (state.transactions || []).filter(r => {
+     if (!r.dateStr) return false;
+     const datePart = String(r.dateStr).trim().split(' ')[0].split('T')[0];
+     const resDate = new Date(datePart);
+     
+     const endHourNum = parseInt(r.endHour ?? r.end_time ?? 0);
+     resDate.setHours(endHourNum, 0, 0, 0);
 
-  // Filtrujemy: zostawiamy tylko dzisiejsze i przyszłe rezerwacje
-  const upcoming = allReservations.filter(r => {
-    if (!r.date) return false;
-    const datePart = String(r.date).trim().split(' ')[0].split('T')[0];
-    const resDate = new Date(datePart);
-    resDate.setHours(0, 0, 0, 0);
+     return resDate.getTime() >= now.getTime();
+   });
 
-    return resDate.getTime() >= today.getTime();
-  });
-
-  // Zapisujemy przefiltrowane rezerwacje do stanu
   state.reservations = upcoming.map(r => ({
     id: String(r.id),
     codeID: r.codeID || r.codeid,
-    courtId: Number(r.court_id),
-    dateStr: r.date,
-    startHour: parseInt(r.begin || r.start_time),
-    endHour: parseInt(r.end || r.end_time),
+    courtId: r.courtId,
+    dateStr: r.dateStr,
+    startHour: parseInt(r.startHour || r.start_time),
+    endHour: parseInt(r.endHour || r.end_time),
     price: r.price,
     returnRequest: r.returnRequest || null
   }));
 
-  // BEZPIECZNE POBRANIE KORTÓW
   let courtsArray = [];
   try {
     const resolvedCourts = await state.courts;
@@ -87,11 +70,11 @@ export async function renderRezerwacje(email) {
   }
 
   const list = upcoming.map(r => {
-    const date = r.date ? new Date(r.date) : new Date();
-    const court = courtsArray.find(c => Number(c.id) === Number(r.court_id)) || { name: 'Kort', surfaceLabel: '' };
+    const date = r.dateStr ? new Date(r.dateStr) : new Date();
+    const court = courtsArray.find(c => Number(c.id) === Number(r.courtId)) || { name: 'Kort', surfaceLabel: '' };
     
-    const rawStart = r.begin ?? r.start_time ?? '00:00:00';
-    const rawEnd = r.end ?? r.end_time ?? '00:00:00';
+    const rawStart = r.startHour ?? r.start_time ?? '00:00:00';
+    const rawEnd = r.endHour ?? r.end_time ?? '00:00:00';
     
     const startHour = String(rawStart);
     const endHour = String(rawEnd);

@@ -2,25 +2,9 @@
 require("config.php");
 header('Content-Type: application/json');
 
-// --- 1. POŁĄCZENIE Z BAZĄ DANYCH ---
-$dbHost = 'localhost';$dbName = 'praktyki_itpol';
-$dbUser = 'root';$dbPass = '';                
-
-try {
-    $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4", $dbUser,$dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-    ]);
-} catch (PDOException $e) {
-    echo json_encode(['error' => 'Błąd połączenia z bazą: ' . $e->getMessage()]);
-    exit;
-}
-
-// --- 2. ODBIÓR DANYCH Z FRONTENDU (JS) + DEBUG --- 
 $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true);
 
-// Zapisujemy surowe dane do pliku debug_log.txt
 file_put_contents('debug_log.txt', "Odebrano z JS:\n" . print_r($input, true) . "\n-----------------\n", FILE_APPEND);
 
 $amount    = floatval($input['amount'] ?? 0);
@@ -29,11 +13,9 @@ $userId    = intval($input['userId'] ?? 0);
 $email     = trim($input['email'] ?? '');
 $dateStr   = trim($input['dateStr'] ?? date('Y-m-d'));
 
-// Bezpieczne pobranie godzin z różnych możliwych kluczy
 $startHour = intval($input['startHour'] ?? ($input['from'] ?? ($input['begin'] ?? 0)));
 $endHour   = intval($input['endHour'] ?? ($input['to'] ?? ($input['end'] ?? 0)));
 
-// Sprawdzenie poprawności godzin
 if ($startHour <= 0 || $endHour <= 0) {
     echo json_encode([
         'error' => 'Odebrano zerowe godziny z frontendu!',
@@ -47,7 +29,6 @@ if ($amount <= 0) {
     exit;
 }
 
-// Pobranie ID użytkownika z bazy na podstawie e-maila
 if ($userId <= 0 && !empty($email)) {
     $stmtUser =$pdo->prepare("SELECT ID FROM users WHERE email = ?");
     $stmtUser->execute([$email]);
@@ -57,7 +38,6 @@ if ($userId <= 0 && !empty($email)) {
     }
 }
 
-// Jeśli nadal brak ID, bierzemy pierwszego użytkownika z tabeli
 if ($userId <= 0) {
     $stmtFirst =$pdo->query("SELECT ID FROM users ORDER BY ID ASC LIMIT 1");
     $firstUser =$stmtFirst->fetch();
@@ -69,22 +49,18 @@ if ($userId <= 0) {
     }
 }
 
-// Jawne rzutowanie i formatowanie godzin
 $startHourInt = (int)$startHour;
 $endHourInt   = (int)$endHour;
 
 $startTimeFormatted = sprintf('%02d:00:00', $startHourInt);
 $endTimeFormatted   = sprintf('%02d:00:00', $endHourInt);
 
-// Identyfikatory i kody
 $codeID = 'SET-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
 $sessionId = 'p24_' . time() . '_' . rand(100, 999);
 
-// --- 3. ZAPIS DO BAZY DANYCH (TRANSAKCJA SQL + BLOKADA TERMINU) ---
 try {
     $pdo->beginTransaction();
 
-    // Sprawdzenie, czy termin nie został zajęty
     $checkStmt =$pdo->prepare("
         SELECT ri.id FROM reservation_items ri
         JOIN reservations r ON ri.reservation_id = r.ID
@@ -101,12 +77,10 @@ try {
         exit;
     }
 
-    // A. Dodanie rekordu głównego w `reservations`
     $stmtRes =$pdo->prepare("INSERT INTO reservations (court_ID, client_ID, codeID) VALUES (?, ?, ?)");
     $stmtRes->execute([$courtId, $userId,$codeID]);
     $reservationId =$pdo->lastInsertId();
 
-    // B. Dodanie szczegółów do `reservation_items` z zabezpieczeniem błędu SQL
     try {
         $stmtItem =$pdo->prepare("
             INSERT INTO reservation_items (reservation_id, court_id, reservation_date, start_time, end_time, price) 
@@ -118,13 +92,10 @@ try {
         exit;
     }
 
-    // --- DODATKOWY DEBUG BAZY ---
     $debugCheck =$pdo->prepare("SELECT start_time, end_time FROM reservation_items WHERE reservation_id = ?");
     $debugCheck->execute([$reservationId]);
     $dbRecord =$debugCheck->fetch();
-    // ----------------------------
 
-    // C. Utworzenie wpisu płatności w `payments`
     $stmtPay =$pdo->prepare("
         INSERT INTO payments (reservation_id, user_id, amount, currency, provider, status) 
         VALUES (?, ?, ?, 'PLN', 'przelewy24', 'pending')
@@ -132,7 +103,6 @@ try {
     $stmtPay->execute([$reservationId, $userId,$amount]);
     $paymentId =$pdo->lastInsertId();
 
-    // D. Dodanie transakcji w `payment_transactions`
     $stmtTrans =$pdo->prepare("
         INSERT INTO payment_transactions (payment_id, session_id, status, amount) 
         VALUES (?, ?, 'pending', ?)
@@ -146,7 +116,6 @@ try {
     exit;
 }
 
-// --- 4. OBSŁUGA TEST MODE / MOCK ---
 $TEST_MODE = true; 
 
 if ($TEST_MODE) {

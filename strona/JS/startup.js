@@ -6,8 +6,6 @@ export async function initializeApp() {
   await initCourts();
   const savedEmail = getCookie('email');
   const savedSessionID = getCookie('PHPSESSID') || '';
-  await getProfileDetails(savedEmail);
-  await fetchReservations(savedEmail);
 
   const urlParams = new URLSearchParams(window.location.search);
   const verifyStatus = urlParams.get('verify_status');
@@ -31,12 +29,14 @@ export async function initializeApp() {
     try {
       const authResult = await checkAuth(savedSessionID, savedEmail);
       
-      if (authResult && authResult.success) {
+      if (authResult && authResult.success)  {
         state.auth.loggedIn = true;
         state.auth.user = { email: savedEmail };
+        await getProfileDetails(savedEmail);
+        await fetchReservations(savedEmail);
       } else {
         console.warn("[DEBUG startup] Sesja odrzucona przez serwer. Czyszczę ciastko.");
-        document.cookie = "email=; path=/; max-age=0";
+        document.cookie = "email=; path=/; max-age=0";  
       }
     } catch (err) {
       console.error('[DEBUG startup] Krytyczny błąd weryfikacji sesji:', err);

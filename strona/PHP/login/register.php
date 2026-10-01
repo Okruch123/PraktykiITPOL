@@ -1,181 +1,188 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
+    header('Content-Type: application/json; charset=utf-8');
 
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL);
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+    error_reporting(E_ALL);
 
-require_once(__DIR__ . '/../../../PHPMailer-master/src/Exception.php');
-require_once(__DIR__ . '/../../../PHPMailer-master/src/PHPMailer.php');
-require_once(__DIR__ . '/../../../PHPMailer-master/src/SMTP.php');
+    require_once(__DIR__ . '/../db_getters/config.php');
+    require_once(__DIR__ . '/../../../PHPMailer-master/src/Exception.php');
+    require_once(__DIR__ . '/../../../PHPMailer-master/src/PHPMailer.php');
+    require_once(__DIR__ . '/../../../PHPMailer-master/src/SMTP.php');
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+    use PHPMailer\PHPMailer\PHPMailer;
 
-function writeDebugLog($message, $data = null) {
-    $logFile = __DIR__ . '/debug.log';
-    $timestamp = date('Y-m-d H:i:s');
-    $content = "[$timestamp] $message";
-    if ($data !== null) {
-        $content .= " | Data: " . json_encode($data, JSON_UNESCAPED_UNICODE);
+    function writeDebugLog($message)
+    {
+        $logFile = __DIR__ . '/debug.log';
+        $timestamp = date('Y-m-d H:i:s');
+        file_put_contents($logFile, "[$timestamp] $message" . PHP_EOL, FILE_APPEND);
     }
-    file_put_contents($logFile, $content . PHP_EOL, FILE_APPEND);
-}
 
-writeDebugLog("--- ROZPOCZĘCIE ŻĄDANIA REJESTRACJI ---");
+    if (!($pdo instanceof PDO)) {
+        writeDebugLog('BŁĄD: Nieprawidłowe połączenie PDO.');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Błąd połączenia z bazą danych.']);
+        exit;
+    }
 
-require_once('../db_getters/config.php');
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true);
 
-if (!$config) {
-    $err = mysqli_connect_error();
-    writeDebugLog("BŁĄD: Połączenie z bazą nie powiodło się", $err);
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Błąd połączenia z bazą: ' . $err]);
-    exit;
-}
+    if (!is_array($data)) {
+        $data = $_POST;
+    }
 
-$rawInput = file_get_contents('php://input');
-writeDebugLog("Odebrany raw input", $rawInput);
+    $email       = trim($data['email'] ?? '');
+    $password    = $data['password'] ?? '';
+    $confirmPass = $data['confirmPassword'] ?? ($data['confirm_password'] ?? '');
+    $username    = trim($data['username'] ?? '');
 
-$data = json_decode($rawInput, true) ?? $_POST;
-writeDebugLog("Zdekodowane dane JS", $data);
+    $firstName   = trim($data['first_name'] ?? ($username ?: 'Użytkownik'));
+    $secondName  = trim($data['second_name'] ?? '');
+    $surname     = trim($data['surname'] ?? 'Brak');
+    $phoneNumber = trim($data['phone_number'] ?? '');
 
-$email       = trim($data['email'] ?? '');
-$password    = $data['password'] ?? '';
-$confirmPass = $data['confirmPassword'] ?? ($data['confirm_password'] ?? '');
-$username    = trim($data['username'] ?? '');
+    if ($email === '' || $password === '') {
+        echo json_encode(['success' => false, 'message' => 'Wypełnij pola email oraz hasło.']);
+        exit;
+    }
 
-$firstName   = trim($data['first_name'] ?? ($username ?: 'Użytkownik'));
-$secondName  = trim($data['second_name'] ?? '');
-$surname     = trim($data['surname'] ?? 'Brak');
-$phoneNumber = trim($data['phone_number'] ?? '');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Podano niepoprawny adres e-mail.']);
+        exit;
+    }
 
-
-if (empty($email) || empty($password)) {
-    writeDebugLog("WALIDACJA ODRZUCONA: Pusty email lub hasło");
-    echo json_encode(['success' => false, 'message' => 'Wypełnij pola email oraz hasło.']);
-    exit;
-}
-
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    writeDebugLog("WALIDACJA ODRZUCONA: Zły format email", $email);
-    echo json_encode(['success' => false, 'message' => 'Podano niepoprawny adres e-mail.']);
-    exit;
-}
-
-if ($password !== $confirmPass) {
-    writeDebugLog("WALIDACJA ODRZUCONA: Hasła nie są identyczne");
-    echo json_encode(['success' => false, 'message' => 'Hasła nie są identyczne.']);
-    exit;
-}
-
-
-$stmtUsers = mysqli_prepare($config, "SELECT ID FROM users WHERE email = ? LIMIT 1");
-mysqli_stmt_bind_param($stmtUsers, "s", $email);
-mysqli_stmt_execute($stmtUsers);
-mysqli_stmt_store_result($stmtUsers);
-
-if (mysqli_stmt_num_rows($stmtUsers) > 0) {
-    writeDebugLog("ODRZUCONO: Użytkownik istnieje w tabeli `users`", $email);
-    echo json_encode(['success' => false, 'message' => 'Konto z tym adresem e-mail już istnieje. Zaloguj się.']);
-    mysqli_stmt_close($stmtUsers);
-    exit;
-}
-mysqli_stmt_close($stmtUsers);
-
-$stmtPending = mysqli_prepare($config, "SELECT ID FROM pending_users WHERE email = ? LIMIT 1");
-mysqli_stmt_bind_param($stmtPending, "s", $email);
-mysqli_stmt_execute($stmtPending);
-mysqli_stmt_store_result($stmtPending);
-
-if (mysqli_stmt_num_rows($stmtPending) > 0) {
-    writeDebugLog("ODRZUCONO: Użytkownik już w `pending_users`", $email);
-    echo json_encode(['success' => false, 'message' => 'Link weryfikacyjny został już wysłany na ten adres e-mail.']);
-    mysqli_stmt_close($stmtPending);
-    exit;
-}
-mysqli_stmt_close($stmtPending);
-
-
-$passwordHash = password_hash($password, PASSWORD_BCRYPT);
-$verificationToken = bin2hex(random_bytes(16));
-$expirationDate = date('Y-m-d', strtotime('+1 day'));
-
-$insertQuery = "INSERT INTO pending_users 
-    (email, password_hash, phone_number, first_name, second_name, surname, verification_token, verification_expiration_date) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
-$stmtInsert = mysqli_prepare($config, $insertQuery);
-
-if (!$stmtInsert) {
-    $dbErr = mysqli_error($config);
-    writeDebugLog("BŁĄD SQL PREPARE", $dbErr);
-    echo json_encode(['success' => false, 'message' => 'Błąd przygotowania SQL: ' . $dbErr]);
-    exit;
-}
-
-mysqli_stmt_bind_param(
-    $stmtInsert, 
-    "ssssssss", 
-    $email, 
-    $passwordHash, 
-    $phoneNumber, 
-    $firstName, 
-    $secondName, 
-    $surname, 
-    $verificationToken, 
-    $expirationDate
-);
-
-if (mysqli_stmt_execute($stmtInsert)) {
-    mysqli_stmt_close($stmtInsert);
-    writeDebugLog("SUKCES: Dodano użytkownika do `pending_users`", ['email' => $email, 'token' => $verificationToken]);
-
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
-    $host = $_SERVER['HTTP_HOST'];
-    $activationUrl = "$protocol://$host/PraktykiITPOL/strona/PHP/login/verify.php?token=$verificationToken";
-
-    $mail = new PHPMailer(true);
+    if ($password !== $confirmPass) {
+        echo json_encode(['success' => false, 'message' => 'Hasła nie są identyczne.']);
+        exit;
+    }
 
     try {
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'oskarjablonski069@gmail.com';
-        $mail->Password   = 'zlwd ypeb bfnq ycsv';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
-        $mail->CharSet    = 'UTF-8';
+        $stmtUsers = $pdo->prepare(
+            'SELECT ID FROM users WHERE email = ? LIMIT 1'
+        );
+        $stmtUsers->execute([$email]);
 
-        $mail->setFrom('oskarjablonski069@gmail.com', 'SETPOINT Rezerwacje');
-        $mail->addAddress($email, $firstName);
+        if ($stmtUsers->fetchColumn() !== false) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Konto z tym adresem e-mail już istnieje. Zaloguj się.'
+            ]);
+            exit;
+        }
 
-        $mail->isHTML(true);
-        $mail->Subject = 'Potwierdzenie rejestracji - SETPOINT';
-        $mail->Body    = "Witaj <b>" . htmlspecialchars($firstName) . "</b>,<br><br>Aby aktywować konto w serwisie SETPOINT, kliknij poniższy link:<br><a href='$activationUrl'>$activationUrl</a><br><br>Link jest ważny do: " . $expirationDate;
-        $mail->AltText = "Witaj $firstName, aby aktywować konto przejdź pod adres: $activationUrl";
+        $stmtPending = $pdo->prepare(
+            'SELECT ID FROM pending_users WHERE email = ? LIMIT 1'
+        );
+        $stmtPending->execute([$email]);
 
-        $mail->send();
-        writeDebugLog("SUKCES: E-mail wysłany przez PHPMailer do", $email);
+        if ($stmtPending->fetchColumn() !== false) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Link weryfikacyjny został już wysłany na ten adres e-mail.'
+            ]);
+            exit;
+        }
 
-        echo json_encode([
-            'success' => true, 
-            'message' => 'Rejestracja udana! Potwierdź link wysłany na e-mail, aby móc się zalogować.'
+        $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+        $verificationToken = bin2hex(random_bytes(16));
+        $expirationDate = date('Y-m-d', strtotime('+1 day'));
+
+        $stmtInsert = $pdo->prepare(
+            'INSERT INTO pending_users
+                (email, password_hash, phone_number, first_name, second_name, surname,
+                verification_token, verification_expiration_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+
+        $stmtInsert->execute([
+            $email,
+            $passwordHash,
+            $phoneNumber,
+            $firstName,
+            $secondName,
+            $surname,
+            $verificationToken,
+            $expirationDate
         ]);
-
-    } catch (Exception $e) {
-        $errorMsg = "Błąd PHPMailer: " . $mail->ErrorInfo;
-        writeDebugLog("BŁĄD PHPMailer", $errorMsg);
-        
-        echo json_encode([
-            'success' => false, 
-            'message' => 'Rejestracja zapisana w bazie, ale nie wysłano maila: ' . $mail->ErrorInfo
-        ]);
+    } catch (PDOException $e) {
+        error_log($e->getMessage());
+        writeDebugLog('BŁĄD: Operacja PDO nie powiodła się.');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Nie udało się zapisać rejestracji.']);
+        exit;
     }
 
-} else {
-    $sqlExecErr = mysqli_stmt_error($stmtInsert);
-    writeDebugLog("BŁĄD EXECUTE SQL", $sqlExecErr);
-    echo json_encode(['success' => false, 'message' => 'Nie udało się zarejestrować (SQL): ' . $sqlExecErr]);
-    mysqli_stmt_close($stmtInsert);
-}
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        ? 'https'
+        : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    $activationUrl = $protocol . '://' . $host
+        . '/PraktykiITPOL/strona/PHP/login/verify.php?token='
+        . urlencode($verificationToken);
+
+    try {
+        $smtpHost   = $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+        $smtpPort   = (int)($_ENV['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: 587);
+        $smtpSecure = strtolower($_ENV['SMTP_SECURE'] ?? getenv('SMTP_SECURE') ?: 'tls');
+        $smtpUsername = $_ENV['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME');
+        $smtpPassword = $_ENV['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD');
+        $fromName   = $_ENV['SMTP_FROM_NAME'] ?? getenv('SMTP_FROM_NAME') ?: 'SETPOINT Rezerwacje';
+
+        if (!$smtpUsername || !$smtpPassword) {
+            throw new RuntimeException('Brak konfiguracji SMTP.');
+        }
+
+        $mail = new PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host = $smtpHost;
+        $mail->SMTPAuth = true;
+        $mail->Username = $smtpUsername;
+        $mail->Password = $smtpPassword;
+
+        if ($smtpSecure === 'ssl') {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        } elseif ($smtpSecure === 'tls' || $smtpSecure === 'starttls') {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        } else {
+            $mail->SMTPSecure = '';
+            $mail->SMTPAutoTLS = false;
+        }
+
+        $mail->Port = $smtpPort;
+        $mail->CharSet = 'UTF-8';
+
+        $mail->setFrom($smtpUsername, $fromName);
+        $mail->addAddress($email, $firstName);
+        $mail->isHTML(true);
+        $mail->Subject = 'Potwierdzenie rejestracji - SETPOINT';
+
+        $safeName = htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8');
+        $safeUrl = htmlspecialchars($activationUrl, ENT_QUOTES, 'UTF-8');
+        $safeExpirationDate = htmlspecialchars($expirationDate, ENT_QUOTES, 'UTF-8');
+
+        $mail->Body = "Witaj <b>{$safeName}</b>,<br><br>"
+            . 'Aby aktywować konto w serwisie SETPOINT, kliknij poniższy link:<br>'
+            . "<a href=\"{$safeUrl}\">{$safeUrl}</a><br><br>"
+            . "Link jest ważny do: {$safeExpirationDate}";
+
+        $mail->AltBody = "Witaj {$firstName}, aby aktywować konto przejdź pod adres: "
+            . "{$activationUrl}. Link jest ważny do: {$expirationDate}";
+
+        $mail->send();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Rejestracja udana! Potwierdź link wysłany na e-mail, aby móc się zalogować.'
+        ]);
+    } catch (\Throwable $e) {
+        error_log($e->getMessage());
+        writeDebugLog('BŁĄD: Nie udało się wysłać e-maila rejestracyjnego.');
+
+        echo json_encode([
+            'success' => false,
+            'message' => 'Rejestracja została zapisana, ale nie udało się wysłać e-maila.'
+        ]);
+    }
+?>

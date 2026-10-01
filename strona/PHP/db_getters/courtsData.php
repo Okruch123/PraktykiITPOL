@@ -2,15 +2,15 @@
     require("config.php");
     header('Content-Type: application/json; charset=utf-8');
 
-    $sql = mysqli_query($config, "
-        SELECT c.*, s.name AS surface_name 
-        FROM courts c 
+    $stmt = $pdo->query("
+        SELECT c.*, s.name AS surface_name
+        FROM courts c
         LEFT JOIN surfaces s ON c.surface_id = s.id
     ");
-    
+
     $data = [];
-    
-    while($res = mysqli_fetch_array($sql)){
+
+    while ($res = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $data[] = [
             "id" => (int)$res["ID"],
             "name" => $res["name"],
@@ -25,6 +25,6 @@
             "description" => $res["description"]
         ];
     }
-    
+
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 ?>

@@ -6,8 +6,9 @@ import {
     confirmTwoFactor
 } from './AJAX/podstrony/profile/twoFactor.js';
 
-import { state } from './state.js';
+import { state, getProfileDetails, fetchReservations } from './state.js';
 import { render } from './AJAX/render.js';
+import { checkAuth } from './AJAX/helpers.js';
 
 
 document.addEventListener('click', async (e) => {
@@ -20,42 +21,31 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-
     const action =
         actionBtn.dataset.action;
-
-
-    // =====================================================
-    // REJESTRACJA
-    // =====================================================
 
     if (action === 'do-register') {
 
         e.preventDefault();
-
         await handleRegister(e);
-
         return;
     }
-
-
-    // =====================================================
-    // LOGOWANIE
-    // =====================================================
 
     if (action === 'do-login') {
 
         e.preventDefault();
-
         await handleLogin(e);
-
+        
+        // Jeśli logowanie przebiegło pomyślnie i mamy ustawiony email / sesję
+        const savedEmail = getCookie ? getCookie('email') : null;
+        if (savedEmail && state.auth.loggedIn) {
+            await getProfileDetails(savedEmail);
+            await fetchReservations(savedEmail);
+        }
+        
+        render();
         return;
     }
-
-
-    // =====================================================
-    // WERYFIKACJA 2FA DLA LOGOWANIA
-    // =====================================================
 
     if (action === 'verify-login-2fa') {
         e.preventDefault();
@@ -78,16 +68,24 @@ document.addEventListener('click', async (e) => {
             const data = await res.json();
 
             if (data.success) {
+                const userEmail = data.user.email;
+
                 state.auth.requires2FA = false;
                 state.auth.loggedIn = true;
-                state.auth.user = { email: data.user.email };
+                state.auth.user = { email: userEmail };
                 state.auth.view = null;
                 state.auth.error = null;
                 
-                // Jeśli masz funkcję sprawdzającą stan autoryzacji globalnej:
-                if (typeof checkAuth === 'function') {
-                    checkAuth(data.user.email);
+                // Sprawdzenie autoryzacji i pobranie danych profilu oraz rezerwacji natychmiast po 2FA
+                const savedSessionID = getCookie('PHPSESSID') || '';
+                try {
+                    await checkAuth(savedSessionID, userEmail);
+                } catch (authErr) {
+                    console.warn('[DEBUG events] checkAuth po 2FA zwróciło ostrzeżenie:', authErr);
                 }
+
+                await getProfileDetails(userEmail);
+                await fetchReservations(userEmail);
                 
                 render();
             } else {
@@ -102,11 +100,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-
-    // =====================================================
-    // ANULOWANIE 2FA DLA LOGOWANIA (POWRÓT)
-    // =====================================================
-
     if (action === 'cancel-login-2fa') {
         e.preventDefault();
         state.auth.requires2FA = false;
@@ -115,17 +108,12 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-
-    // =====================================================
-    // PRZEŁĄCZANIE LOGOWANIE / REJESTRACJA
-    // =====================================================
-
     if (action === 'switch-auth') {
 
         e.preventDefault();
 
         state.auth.view =
-            actionBtn.dataset.mode;
+        actionBtn.dataset.mode;
 
         state.auth.error = null;
         state.auth.requires2FA = false;
@@ -135,21 +123,13 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-
-    // =====================================================
-    // ZAMKNIĘCIE AUTORYZACJI
-    // =====================================================
-
     if (action === 'close-auth') {
 
         e.preventDefault();
 
         state.auth.view = null;
-
-        state.auth.error = null;
-        
-        state.auth.requires2FA = false;
-        
+        state.auth.error = null;       
+        state.auth.requires2FA = false;   
         state.auth.resumeToPayment = false;
 
         render();
@@ -157,28 +137,16 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-
-    // =====================================================
-    // START 2FA (W PANELU UŻYTKOWNIKA)
-    // =====================================================
-
     if (action === 'start-2fa') {
 
         e.preventDefault();
-
         console.log(
             '[2FA] Kliknięto Włącz/Wyłącz'
         );
-
         startTwoFactor();
 
         return;
     }
-
-
-    // =====================================================
-    // WYŚLIJ KOD 2FA (W PANELU UŻYTKOWNIKA)
-    // =====================================================
 
     if (action === 'send-2fa-code') {
 
@@ -193,11 +161,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-
-    // =====================================================
-    // POTWIERDŹ KOD 2FA (W PANELU UŻYTKOWNIKA)
-    // =====================================================
-
     if (action === 'confirm-2fa') {
 
         e.preventDefault();
@@ -206,21 +169,13 @@ document.addEventListener('click', async (e) => {
             '[2FA] Kliknięto Potwierdź'
         );
 
-
-        /*
-         * Znajdujemy dokładnie ten panel 2FA,
-         * w którym znajduje się kliknięty przycisk.
-         */
-
         const panel =
             actionBtn.closest('.twofa-panel');
-
 
         console.log(
             '[2FA] PANEL:',
             panel
         );
-
 
         if (!panel) {
 
@@ -231,23 +186,15 @@ document.addEventListener('click', async (e) => {
             return;
         }
 
-
-        /*
-         * Szukamy inputa wyłącznie wewnątrz
-         * tego panelu.
-         */
-
         const input =
             panel.querySelector(
                 '.twofa-code-input'
             );
 
-
         console.log(
             '[2FA] INPUT Z PANELU:',
             input
         );
-
 
         console.log(
             '[2FA] WARTOŚĆ:',
@@ -256,12 +203,10 @@ document.addEventListener('click', async (e) => {
                 : 'BRAK'
         );
 
-
         await confirmTwoFactor(
             input,
             panel
         );
-
 
         return;
     }

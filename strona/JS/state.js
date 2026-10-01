@@ -36,7 +36,6 @@ const state = {
         loading: false,
         requires2FA: false,
         resumeToPayment: false,
-        // Pola do zachowania wpisanych danych przy renderowaniu stanu ładowania
         email: '',
         password: '',
         rememberMe: false
@@ -44,14 +43,12 @@ const state = {
 
     profile: {},
 
-    // Startujemy z pustą tablicą – dane załadujemy funkcją initCourts()
     courts: [],
     reservations: [],
 
     transactions: []
 };
 
-// Funkcja pobierająca korty i zapisująca je do stanu jako zwykłą tablicę
 export async function initCourts() {
     try {
         const response = await fetch('PHP/db_getters/courtsData.php');
@@ -105,7 +102,6 @@ export async function fetchBookedHoursFromServer(courtId, dateStr) {
     }
 }
 
-// Funkcja pobierająca wszystkie rezerwacje użytkownika do stanu (np. do historii)
 export async function fetchReservations(email) {
     try {
         const response = await fetch("PHP/db_getters/get_reservations.php", {
